@@ -17,7 +17,8 @@
 - Cópia legal do APK de **Bruce Lee: Dragon Warrior 1.15.26** e do
   `data.zpak` do jogo.
 - ~220 MB livres em `ux0:`.
-- VPK da aba **Releases** deste repositório.
+- VPK da aba **Releases**:
+  <https://github.com/lferrete/brucelee-vita/releases/latest>.
 
 ## 2. Plugins
 

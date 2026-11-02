@@ -15,6 +15,9 @@ usando [vitaGL](https://github.com/Rinnegatamante/vitagl) e o ecossistema
 > de uma **cópia legal** do jogo Android. Leia [`LEGAL.md`](LEGAL.md) antes de
 > instalar ou redistribuir.
 
+**Repositório:** <https://github.com/lferrete/brucelee-vita>  
+**Release:** <https://github.com/lferrete/brucelee-vita/releases/latest>
+
 ---
 
 ## Status
