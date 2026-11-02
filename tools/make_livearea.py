@@ -14,6 +14,7 @@ Outputs (git-ignored):
   extras/livearea_personal/pic0.png    960x544
   extras/livearea_personal/bg0.png     840x500
   extras/livearea_personal/startup.png 280x158
+  extras/livearea_personal/template.xml
   extras/loading_personal.rgb565       raw 960x544 RGB565
 
 For the PUBLIC release use make_neutral_livearea.py instead.
@@ -22,6 +23,7 @@ Pillow is required: pip install pillow
 
 Port code Copyright (C) 2026 Leandro Ferrete.
 """
+import shutil
 import struct
 from pathlib import Path
 import math
@@ -287,6 +289,10 @@ def main():
     make_icon(icon)
     make_loading()
 
+    tpl = LIVE / "template.xml"
+    if tpl.exists():
+        shutil.copy2(tpl, PERSONAL / "template.xml")
+
     for name in ("icon0.png", "pic0.png", "bg0.png", "startup.png"):
         p = PERSONAL / name
         im = Image.open(p)
@@ -295,5 +301,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

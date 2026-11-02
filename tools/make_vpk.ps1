@@ -36,24 +36,40 @@ $sfo = Join-Path $BuildDir "param.sfo"
     $sfo
 
 if (-not $ArtDir) {
-    $ArtDir = Join-Path $projectRoot "extras\livearea"
+    $personalDir = Join-Path $projectRoot "extras\livearea_personal"
+    if (Test-Path -LiteralPath (Join-Path $personalDir "icon0.png")) {
+        $ArtDir = $personalDir
+    } else {
+        $ArtDir = Join-Path $projectRoot "extras\livearea"
+    }
 } elseif (-not [System.IO.Path]::IsPathRooted($ArtDir)) {
     $ArtDir = Join-Path $projectRoot $ArtDir
 }
 if (-not $LoadingFile) {
-    $LoadingFile = Join-Path $projectRoot "extras\loading.rgb565"
+    $personalLoading = Join-Path $projectRoot "extras\loading_personal.rgb565"
+    if (Test-Path -LiteralPath $personalLoading) {
+        $LoadingFile = $personalLoading
+    } else {
+        $LoadingFile = Join-Path $projectRoot "extras\loading.rgb565"
+    }
 } elseif (-not [System.IO.Path]::IsPathRooted($LoadingFile)) {
     $LoadingFile = Join-Path $projectRoot $LoadingFile
 }
 $assets = $ArtDir
 $provenance = Join-Path $projectRoot "extras\provenance.txt"
 $loading = $LoadingFile
+
+$template = Join-Path $assets "template.xml"
+if (-not (Test-Path -LiteralPath $template)) {
+    $template = Join-Path $projectRoot "extras\livearea\template.xml"
+}
+
 & (Join-Path $vitasdk "bin\vita-pack-vpk.exe") `
     -a "$assets\icon0.png=sce_sys/icon0.png" `
     -a "$assets\pic0.png=sce_sys/pic0.png" `
     -a "$assets\startup.png=sce_sys/livearea/contents/startup.png" `
     -a "$assets\bg0.png=sce_sys/livearea/contents/bg0.png" `
-    -a "$assets\template.xml=sce_sys/livearea/contents/template.xml" `
+    -a "$template=sce_sys/livearea/contents/template.xml" `
     -a "$provenance=sce_sys/provenance.txt" `
     -a "$loading=loading.rgb565" `
     -s $sfo `
