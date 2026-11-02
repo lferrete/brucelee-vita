@@ -1,0 +1,1249 @@
+/*
+ * Copyright (C) 2021      Andy Nguyen
+ * Copyright (C) 2022      Rinnegatamante
+ * Copyright (C) 2022-2024 Volodymyr Atamanenko
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license. See the LICENSE file for details.
+ */
+
+#include "reimpl/io.h"
+
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/unistd.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <stdarg.h>
+#include <pthread.h>
+#include <malloc.h>
+#include <psp2/kernel/threadmgr.h>
+#include <psp2/kernel/processmgr.h>
+#include <psp2/power.h>
+#include <psp2/io/fcntl.h>
+#include <psp2/io/dirent.h>
+#include <psp2/io/stat.h>
+
+#ifdef USE_SCELIBC_IO
+#include <libc_bridge/libc_bridge.h>
+#endif
+
+#include "utils/breadcrumb.h"
+#include "utils/logger.h"
+#include "utils/utils.h"
+
+static FILE *fake_fd_file(int fd);
+static void fake_fd_release(FILE *f);
+
+/*
+ * [sndprobe] Sonda de diagnostico del audio (RELEASES.md, issue #1: solo suena el motor).
+ * vox::SoundManager carga los sonidos desde file00a.bin: los `mem_od_*` (PCM, motor) van a
+ * RAM y SI suenan; la musica (m_title.wav) y los SFX son IMA ADPCM en modo stream
+ * (vox::StreamCFile -> FileLimited sobre un fopen propio de file00a.bin) y NO suenan.
+ * Esto registra que hace vox con cada handle de file00a.bin (seek/tell/read + resultado)
+ * para ver si el stream llega a leerse. Cap global de lineas para no inundar el log.
+ */
+#define SNDPROBE_MAX_HANDLES 16
+#define SNDPROBE_LINE_CAP 400
+static struct { FILE *f; int ops; int reads; long bytes; } s_sndprobe[SNDPROBE_MAX_HANDLES];
+static volatile int s_sndprobe_lines = 0;
+
+static int sndprobe_slot(FILE *f) {
+    for (int i = 0; i < SNDPROBE_MAX_HANDLES; i++)
+        if (s_sndprobe[i].f == f) return i;
+    return -1;
+}
+
+static void sndprobe_track(const char *filename, FILE *f) {
+    if (!f || !strstr(filename, "file00a.bin")) return;
+    for (int i = 0; i < SNDPROBE_MAX_HANDLES; i++) {
+        if (s_sndprobe[i].f == NULL) {
+            s_sndprobe[i].f = f; s_sndprobe[i].ops = 0;
+            s_sndprobe[i].reads = 0; s_sndprobe[i].bytes = 0;
+            return;
+        }
+    }
+}
+
+// Loguea las primeras 24 operaciones de cada handle y despues 1 de cada 512 lecturas.
+static int sndprobe_should_log(int slot) {
+    if (__atomic_load_n(&s_sndprobe_lines, __ATOMIC_RELAXED) >= SNDPROBE_LINE_CAP) return 0;
+    int ops = ++s_sndprobe[slot].ops;
+    if (ops > 24 && (s_sndprobe[slot].reads % 512) != 0) return 0;
+    __atomic_add_fetch(&s_sndprobe_lines, 1, __ATOMIC_RELAXED);
+    return 1;
+}
+
+
+// Includes the following inline utilities:
+// int oflags_musl_to_newlib(int flags);
+// dirent64_bionic * dirent_newlib_to_bionic(struct dirent* dirent_newlib);
+// void stat_newlib_to_bionic(struct stat * src, stat64_bionic * dst);
+#include "reimpl/bits/_struct_converters.c"
+
+// Fix confirmed con so-crash-triage (dump asphalt6-psp2core-1788277870-0x0007bc2dcb,
+// log logs/live_session_20260901_115057.log): el motor no usa los assets embebidos en el
+// APK/JNI (GLResLoader) para los "file000000.dat"/etc. -- los abre por fopen() directo con
+// una ruta absoluta de Android hardcodeada ("/sdcard/gameloft/games/GloftA6HP/..."), que en
+// la Vita no existe -> fopen() devuelve NULL -> glitch::io::CFileSystem::createAndOpenFile()
+// devuelve NULL -> crash sin chequeo en addObfuscationFileMap(). Los mismos fileNNNNNN.dat ya
+// están en ux0_data/asphalt6/data/ (extraídos junto con el resto de los datos en Fase 4) --
+// solo hace falta redirigir el prefijo, igual que ya se hace para /proc/cpuinfo /proc/meminfo.
+#define GAMELOFT_SDCARD_PREFIX "/sdcard/gameloft/games/GloftA6HP/"
+
+// Rewrites the virtual Android/ZSystem paths used by Bruce Lee to the
+// ux0:data/brucelee tree.  The ZPlatform file-system manager mounts paths such
+// as /sdcard, /game, /ext0 and /content0; the game package (Core.pakh /
+// Core.pakd000) lives in content/ in our data directory.
+static bool remap_gameloft_sdcard_path(const char * path, char * out, size_t out_size) {
+    if (!path || path[0] != '/')
+        return false;
+
+    if (!strcmp(path, "/")) {
+        snprintf(out, out_size, DATA_PATH "content");
+        return true;
+    }
+    if (!strcmp(path, "/proc/cpuinfo")) {
+        snprintf(out, out_size, DATA_PATH "cpuinfo");
+        return true;
+    }
+    if (!strcmp(path, "/proc/meminfo")) {
+        snprintf(out, out_size, DATA_PATH "meminfo");
+        return true;
+    }
+
+    if (strstr(path, "Core.pakh") || strstr(path, "Core.pakd000")) {
+        const char *base = strrchr(path, '/');
+        base = base ? base + 1 : path;
+        snprintf(out, out_size, DATA_PATH "content/%s", base);
+        return true;
+    }
+    if (strstr(path, "data.zpak")) {
+        snprintf(out, out_size, DATA_PATH "content/data.zpak");
+        return true;
+    }
+    if (strstr(path, "BruceLee.zpak")) {
+        snprintf(out, out_size, DATA_PATH "assets/BruceLee.zpak");
+        return true;
+    }
+
+    // Android app-private roots.  ZPlatform builds paths such as
+    //   /sdcard/Android/data/<pkg>/files/content/
+    //   /sdcard/Android/data/<pkg>/files/save/
+    //   /data/data/<pkg>/cache/persistent_storage
+    // and our data tree already mirrors those sub-folders (content/, save/,
+    // cache/, files/, ucc0/).
+    static const char *android_roots[] = {
+        "/sdcard/Android/data/com.digitallegends.brucelee/files",
+        "/data/data/com.digitallegends.brucelee/files",
+        "/data/data/com.digitallegends.brucelee",
+    };
+    for (size_t i = 0; i < sizeof(android_roots) / sizeof(android_roots[0]); ++i) {
+        size_t n = strlen(android_roots[i]);
+        if (strncmp(path, android_roots[i], n) != 0)
+            continue;
+        const char *rest = path + n;
+        while (*rest == '/') rest++;
+        snprintf(out, out_size, DATA_PATH "%s", rest);
+        return true;
+    }
+
+    static const char *roots[] = {
+        "/sdcard", "/game", "/ext0", "/ext1", "/fonts", "/save", "/save0",
+        "/content", "/content0", "/ucc0",
+        "/data/data/com.digitallegends.brucelee/files",
+        "/data/data/com.digitallegends.brucelee",
+    };
+    for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); ++i) {
+        size_t n = strlen(roots[i]);
+        if (strncmp(path, roots[i], n) != 0)
+            continue;
+        const char *rest = path + n;
+        while (*rest == '/') rest++;
+        snprintf(out, out_size, DATA_PATH "%s/%s", roots[i] + 1, rest);
+        return true;
+    }
+
+    // Some ZSystem builds also use absolute paths such as
+    // /data/data/<pkg>/... and /mnt/sdcard/...; leave unknown paths alone.
+    return false;
+}
+
+// Directories that ZPlatform enumerates while looking for packages.  We point
+// them at content/, where Core.pakh/Core.pakd000 are installed.
+static const char *content_dir_for(const char *path) {
+    if (!path) return NULL;
+    if (!strcmp(path, "/"))
+        return DATA_PATH "content";
+
+    /* Only the *package discovery roots* are redirected to content/.
+     * Compare the last path component so ".../files/patch/" or ".../files/save/"
+     * keep their own folders. */
+    size_t len = strlen(path);
+    while (len > 1 && path[len - 1] == '/')
+        len--;
+    const char *slash = path + len;
+    while (slash > path && slash[-1] != '/')
+        slash--;
+    size_t clen = (size_t)((path + len) - slash);
+
+    if ((clen == 6 && strncmp(slash, "sdcard", 6) == 0) ||
+        (clen == 4 && strncmp(slash, "game", 4) == 0) ||
+        (clen == 7 && strncmp(slash, "content", 7) == 0) ||
+        (clen == 8 && strncmp(slash, "content0", 8) == 0))
+        return DATA_PATH "content";
+    return NULL;
+}
+
+// Fallback defensivo (Bug #023): si un asset hace referencia a "IPAD2a_<Name>",
+// quita el prefijo "IPAD2a_" para intentar resolver "<Name>" en el data set de Android.
+static bool strip_ipad2_prefix(const char * path, char * out, size_t out_size) {
+    const char * p = strstr(path, "IPAD2a_");
+    if (!p)
+        return false;
+
+    size_t head_len = (size_t)(p - path);
+    snprintf(out, out_size, "%.*s%s", (int)head_len, path, p + strlen("IPAD2a_"));
+    return true;
+}
+
+// Misses ESPERADOS que no aportan nada al log (log 060: cientos de lineas por
+// carga): el motor sondea cada SFX por nombre suelto ("sfx_*.wav", "vfx_*",
+// "m_*", "*.vxn" sin ruta -- esos viven en file00a.bin via soundpack, nunca como
+// archivo suelto) y cada textura PVRTC por archivo suelto ("*.PVRTC4.tga",
+// "*NOMIPMAP*" -- esas viven en los fileNNNNNN.dat via el mapa de ofuscacion).
+// El negative cache ya evita repetir el acceso a la SD; esto evita ademas la
+// linea de log en Debug, que es un sceIoWrite por miss.
+static int io_expected_miss(const char *filename) {
+    if (!strchr(filename, '/')) {
+        size_t n = strlen(filename);
+        if (n > 4 && (strcmp(filename + n - 4, ".wav") == 0 ||
+                      strcmp(filename + n - 4, ".vxn") == 0 ||
+                      strcmp(filename + n - 4, ".png") == 0 ||
+                      strcmp(filename + n - 4, ".tga") == 0))
+            return 1;
+    }
+    if (strstr(filename, "NOMIPMAP") || strstr(filename, "PVRTC4") ||
+        strstr(filename, ".car") || strcmp(filename, "ux0:data/asphalt6/data/glsl.config") == 0)
+        return 1;
+    return 0;
+}
+#define FCACHE_ENABLED 0
+#define FCACHE_MAX_ENTRIES 1024
+#define FCACHE_MAX_FILE_SIZE (4 * 1024 * 1024)
+#define FCACHE_MAX_TOTAL_BYTES (48 * 1024 * 1024)
+#define FCACHE_MAX_HANDLES 64
+
+typedef struct {
+    char path[256];
+    unsigned char *data;
+    long size;
+} FCacheEntry;
+
+typedef struct {
+    int entry_idx; // -1 = free slot
+    long pos;
+} FCacheHandle;
+
+static FCacheEntry s_fcache_entries[FCACHE_MAX_ENTRIES];
+static int s_fcache_entry_count = 0;
+static long s_fcache_total_bytes = 0;
+static FCacheHandle s_fcache_handles[FCACHE_MAX_HANDLES];
+static int s_fcache_handles_init = 0;
+static pthread_mutex_t s_fcache_lock = PTHREAD_MUTEX_INITIALIZER;
+
+#define NEG_CACHE_SIZE 2048
+static char s_neg_cache[NEG_CACHE_SIZE][256];
+static int s_neg_cache_count = 0;
+
+static void fcache_init_handles_locked(void) {
+    if (s_fcache_handles_init) return;
+    for (int i = 0; i < FCACHE_MAX_HANDLES; i++) s_fcache_handles[i].entry_idx = -1;
+    s_fcache_handles_init = 1;
+}
+
+static int fcache_find_entry_locked(const char *path) {
+    for (int i = 0; i < s_fcache_entry_count; i++) {
+        if (strcmp(s_fcache_entries[i].path, path) == 0) return i;
+    }
+    return -1;
+}
+
+static int fcache_is_handle(void *f) {
+    uintptr_t p = (uintptr_t)f;
+    uintptr_t base = (uintptr_t)s_fcache_handles;
+    uintptr_t end = base + sizeof(s_fcache_handles);
+    return p >= base && p < end && ((p - base) % sizeof(FCacheHandle)) == 0;
+}
+
+static FILE *fcache_open_handle_locked(int entry_idx) {
+    fcache_init_handles_locked();
+    for (int i = 0; i < FCACHE_MAX_HANDLES; i++) {
+        if (s_fcache_handles[i].entry_idx == -1) {
+            s_fcache_handles[i].entry_idx = entry_idx;
+            s_fcache_handles[i].pos = 0;
+            return (FILE *)&s_fcache_handles[i];
+        }
+    }
+    return NULL;
+}
+
+static int fcache_is_cacheable_mode(const char *mode) {
+#if !FCACHE_ENABLED
+    (void)mode;
+    return 0;
+#else
+    return strcmp(mode, "r") == 0 || strcmp(mode, "rb") == 0;
+#endif
+}
+
+static void fcache_populate(const char *path, FILE *real_file) {
+    sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
+    pthread_mutex_lock(&s_fcache_lock);
+    fcache_init_handles_locked();
+    if (s_fcache_entry_count >= FCACHE_MAX_ENTRIES || strlen(path) >= sizeof(s_fcache_entries[0].path)) {
+        pthread_mutex_unlock(&s_fcache_lock);
+        return;
+    }
+    if (fcache_find_entry_locked(path) >= 0) {
+        pthread_mutex_unlock(&s_fcache_lock);
+        return;
+    }
+    pthread_mutex_unlock(&s_fcache_lock);
+
+#ifdef USE_SCELIBC_IO
+    sceLibcBridge_fseek(real_file, 0, SEEK_END);
+    long size = sceLibcBridge_ftell(real_file);
+    sceLibcBridge_fseek(real_file, 0, SEEK_SET);
+#else
+    fseek(real_file, 0, SEEK_END);
+    long size = ftell(real_file);
+    fseek(real_file, 0, SEEK_SET);
+#endif
+    if (size <= 0 || size > FCACHE_MAX_FILE_SIZE) return;
+
+    pthread_mutex_lock(&s_fcache_lock);
+    if (s_fcache_total_bytes + size > FCACHE_MAX_TOTAL_BYTES) {
+        pthread_mutex_unlock(&s_fcache_lock);
+        return;
+    }
+    pthread_mutex_unlock(&s_fcache_lock);
+
+    unsigned char *buf = (unsigned char *)malloc((size_t)size);
+    if (!buf) return;
+
+#ifdef USE_SCELIBC_IO
+    size_t got = sceLibcBridge_fread(buf, 1, (size_t)size, real_file);
+    sceLibcBridge_fseek(real_file, 0, SEEK_SET);
+#else
+    size_t got = fread(buf, 1, (size_t)size, real_file);
+    fseek(real_file, 0, SEEK_SET);
+#endif
+    if (got != (size_t)size) {
+        free(buf);
+        return;
+    }
+
+    pthread_mutex_lock(&s_fcache_lock);
+    if (s_fcache_entry_count >= FCACHE_MAX_ENTRIES || fcache_find_entry_locked(path) >= 0) {
+        pthread_mutex_unlock(&s_fcache_lock);
+        free(buf);
+        return;
+    }
+    FCacheEntry *e = &s_fcache_entries[s_fcache_entry_count++];
+    strncpy(e->path, path, sizeof(e->path) - 1);
+    e->path[sizeof(e->path) - 1] = '\0';
+    e->data = buf;
+    e->size = size;
+    s_fcache_total_bytes += size;
+    pthread_mutex_unlock(&s_fcache_lock);
+
+    l_debug("[fcache] cached %s (%ld bytes, %ld/%d bytes total in %d files)",
+            path, size, s_fcache_total_bytes, FCACHE_MAX_TOTAL_BYTES, s_fcache_entry_count);
+}
+
+void fcache_invalidate(const char *path) {
+    if (!path) return;
+    pthread_mutex_lock(&s_fcache_lock);
+    for (int i = 0; i < s_fcache_entry_count; i++) {
+        if (strcmp(s_fcache_entries[i].path, path) == 0) {
+            free(s_fcache_entries[i].data);
+            s_fcache_total_bytes -= s_fcache_entries[i].size;
+            s_fcache_entries[i] = s_fcache_entries[--s_fcache_entry_count];
+            l_debug("[fcache] invalidated %s (write/delete, %d files remain)",
+                    path, s_fcache_entry_count);
+            break;
+        }
+    }
+    for (int i = 0; i < s_neg_cache_count; ) {
+        if (strcmp(s_neg_cache[i], path) == 0) {
+            if (i + 1 < s_neg_cache_count) {
+                memmove(&s_neg_cache[i], &s_neg_cache[i + 1],
+                        (size_t)(s_neg_cache_count - i - 1) * sizeof(s_neg_cache[0]));
+            }
+            s_neg_cache_count--;
+        } else {
+            i++;
+        }
+    }
+    pthread_mutex_unlock(&s_fcache_lock);
+}
+
+/*
+ * Handles con descriptor COMPARTIDO para file00a.bin (143 MB, todo el audio de vox).
+ * vox abre un FILE* propio por cada sonido que arranca (vox::FileLimited sobre fopen):
+ * log 086 = 868 aperturas en la sesion, ~2 por segundo en carrera. Cada una era un
+ * sceIoOpen + sceIoClose a la SD mas un buffer stdio de 64 KB que se llenaba entero
+ * aunque el sonido pesara 8 KB -- tirones de I/O en pleno juego. Ahora el archivo se
+ * abre UNA vez y cada fopen devuelve un handle liviano (posicion propia + buffer de
+ * 16 KB) que lee con sceIoPread, que toma el offset explicito y es seguro entre hilos.
+ * Solo lectura; cubre las mismas funciones stdio que los handles del fcache.
+ */
+#define SHF_SUFFIX "data/file00a.bin"
+#define SHF_MAX_HANDLES 32
+#define SHF_BUF_SIZE (16 * 1024)
+
+typedef struct {
+    int used;
+    long pos;
+    long buf_off;
+    int buf_len;
+    unsigned char buf[SHF_BUF_SIZE];
+} ShfHandle;
+
+static ShfHandle s_shf[SHF_MAX_HANDLES];
+static SceUID s_shf_fd = -1;
+static long s_shf_size = 0;
+static pthread_mutex_t s_shf_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static inline int shf_is_handle(void *f) {
+    uintptr_t p = (uintptr_t)f;
+    return p >= (uintptr_t)s_shf && p < (uintptr_t)s_shf + sizeof(s_shf);
+}
+
+static FILE *shf_open(const char *filename, const char *mode) {
+    size_t len = strlen(filename), sl = sizeof(SHF_SUFFIX) - 1;
+    if (len < sl || strcmp(filename + len - sl, SHF_SUFFIX) != 0) return NULL;
+    if (strcmp(mode, "r") != 0 && strcmp(mode, "rb") != 0) return NULL;
+
+    FILE *ret = NULL;
+    pthread_mutex_lock(&s_shf_lock);
+    if (s_shf_fd < 0) {
+        SceUID fd = sceIoOpen(filename, SCE_O_RDONLY, 0);
+        if (fd >= 0) {
+            long size = (long)sceIoLseek(fd, 0, SCE_SEEK_END);
+            if (size > 0) {
+                s_shf_fd = fd;
+                s_shf_size = size;
+                l_info("[shf] %s abierto una vez (%ld bytes), fopen sin tocar la SD", filename, size);
+            } else {
+                sceIoClose(fd);
+            }
+        }
+    }
+    if (s_shf_fd >= 0) {
+        for (int i = 0; i < SHF_MAX_HANDLES; i++) {
+            if (!s_shf[i].used) {
+                s_shf[i].used = 1;
+                s_shf[i].pos = 0;
+                s_shf[i].buf_off = 0;
+                s_shf[i].buf_len = 0;
+                ret = (FILE *)&s_shf[i];
+                break;
+            }
+        }
+    }
+    pthread_mutex_unlock(&s_shf_lock);
+    return ret; // NULL = pool lleno o sin archivo: fopen normal
+}
+
+static size_t shf_read(void *ptr, size_t size, size_t nmemb, ShfHandle *h) {
+    if (size == 0 || nmemb == 0) return 0;
+    long want = (long)(size * nmemb);
+    long left = s_shf_size - h->pos;
+    if (left <= 0) return 0;
+    if (want > left) want = left - (left % (long)size);
+
+    unsigned char *dst = (unsigned char *)ptr;
+    long done = 0;
+    while (done < want) {
+        long need = want - done;
+        if (h->pos >= h->buf_off && h->pos < h->buf_off + h->buf_len) {
+            long n = h->buf_off + h->buf_len - h->pos;
+            if (n > need) n = need;
+            memcpy(dst + done, h->buf + (h->pos - h->buf_off), (size_t)n);
+            h->pos += n;
+            done += n;
+        } else if (need >= SHF_BUF_SIZE) {
+            int r = sceIoPread(s_shf_fd, dst + done, (SceSize)need, (SceOff)h->pos);
+            if (r <= 0) break;
+            h->pos += r;
+            done += r;
+        } else {
+            int r = sceIoPread(s_shf_fd, h->buf, SHF_BUF_SIZE, (SceOff)h->pos);
+            if (r <= 0) break;
+            h->buf_off = h->pos;
+            h->buf_len = r;
+        }
+    }
+    return (size_t)done / size;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Self-heal the application manifest.                                        */
+/* ZPlatform opens <content root>/metadata.xml and needs the *application*     */
+/* manifest (with <platforms><platform type="android">), not the small         */
+/* container manifest that ships inside data.zpak.  Both are called           */
+/* metadata.xml, so instead of failing we extract the right one from the       */
+/* bootstrap package (assets/BruceLee.zpak, stored uncompressed).              */
+/* ------------------------------------------------------------------------- */
+static unsigned int rd_u16(const unsigned char *p) {
+    return (unsigned int)p[0] | ((unsigned int)p[1] << 8);
+}
+static unsigned int rd_u32(const unsigned char *p) {
+    return (unsigned int)p[0] | ((unsigned int)p[1] << 8) |
+           ((unsigned int)p[2] << 16) | ((unsigned int)p[3] << 24);
+}
+
+static void maybe_fix_app_metadata(const char *path) {
+    if (!path)
+        return;
+    if (strstr(path, "/content/") || strstr(path, "/game/"))
+        return; /* those copies are fine as they are */
+
+    const char *base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    if (strcmp(base, "metadata.xml") != 0)
+        return;
+
+    SceIoStat st;
+    if (sceIoGetstat(path, &st) < 0)
+        return;
+    if (st.st_size >= 900)
+        return; /* already the application manifest */
+
+    FILE *z = fopen(DATA_PATH "assets/BruceLee.zpak", "rb");
+    if (!z)
+        return;
+
+    unsigned char hdr[30];
+    if (fread(hdr, 1, sizeof(hdr), z) != sizeof(hdr) ||
+        rd_u32(hdr) != 0x04034b50u) {
+        fclose(z);
+        return;
+    }
+    unsigned int method   = rd_u16(hdr + 8);
+    unsigned int csize    = rd_u32(hdr + 18);
+    unsigned int name_len = rd_u16(hdr + 26);
+    unsigned int extra    = rd_u16(hdr + 28);
+
+    char name[64] = {0};
+    if (name_len >= sizeof(name) || fread(name, 1, name_len, z) != name_len) {
+        fclose(z);
+        return;
+    }
+    if (strcmp(name, "metadata.xml") != 0 || method != 0 || csize == 0 ||
+        csize > 8192 || fseek(z, (long)extra, SEEK_CUR) != 0) {
+        fclose(z);
+        return;
+    }
+
+    unsigned char *buf = malloc(csize);
+    if (!buf) {
+        fclose(z);
+        return;
+    }
+    size_t got = fread(buf, 1, csize, z);
+    fclose(z);
+    if (got != csize) {
+        free(buf);
+        return;
+    }
+
+    FILE *out = fopen(path, "wb");
+    if (out) {
+        fwrite(buf, 1, csize, out);
+        fclose(out);
+        l_info("[io] %s era o manifesto de container (%d bytes); "
+               "substituido pelo de aplicacao (%u bytes)",
+               path, (int)st.st_size, csize);
+    }
+    free(buf);
+}
+
+FILE * fopen_soloader(const char * filename, const char * mode) {
+    bc_event("fopen", BC_RA);
+    if (strcmp(filename, "/proc/cpuinfo") == 0) {
+        return fopen_soloader("app0:/cpuinfo", mode);
+    } else if (strcmp(filename, "/proc/meminfo") == 0) {
+        return fopen_soloader("app0:/meminfo", mode);
+    }
+
+    if (strchr(mode, 'r'))
+        maybe_fix_app_metadata(filename);
+
+    char remapped[256];
+    if (remap_gameloft_sdcard_path(filename, remapped, sizeof(remapped))) {
+        return fopen_soloader(remapped, mode);
+    }
+
+    // Negative cache lookup: if previously failed to open for read, return NULL immediately
+    if (strchr(mode, 'r')) {
+        pthread_mutex_lock(&s_fcache_lock);
+        for (int i = 0; i < s_neg_cache_count; i++) {
+            if (strcmp(s_neg_cache[i], filename) == 0) {
+                pthread_mutex_unlock(&s_fcache_lock);
+                return NULL;
+            }
+        }
+        pthread_mutex_unlock(&s_fcache_lock);
+    }
+
+    // Fast-path: RAM in-memory cache hit
+    if (fcache_is_cacheable_mode(mode)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        fcache_init_handles_locked();
+        int entry_idx = fcache_find_entry_locked(filename);
+        FILE *cached = (entry_idx >= 0) ? fcache_open_handle_locked(entry_idx) : NULL;
+        pthread_mutex_unlock(&s_fcache_lock);
+        if (cached) {
+            l_debug("fopen(%s, %s): %p (cache hit)", filename, mode, cached);
+            return cached;
+        }
+    }
+
+    FILE *shared = shf_open(filename, mode);
+    if (shared) return shared;
+
+#ifdef USE_SCELIBC_IO
+    FILE* ret = sceLibcBridge_fopen(filename, mode);
+#else
+    FILE* ret = fopen(filename, mode);
+#endif
+
+    if (!ret && strip_ipad2_prefix(filename, remapped, sizeof(remapped))) {
+        l_info("[io] Fallback IPAD2a_: reintentando fopen('%s')", remapped);
+#ifdef USE_SCELIBC_IO
+        ret = sceLibcBridge_fopen(remapped, mode);
+#else
+        ret = fopen(remapped, mode);
+#endif
+    }
+
+    // Invalidate caches if opening with write intent
+    if (mode && strpbrk(mode, "wa+") != NULL) {
+        if (ret) fcache_invalidate(filename);
+    }
+
+    if (ret) {
+#ifdef USE_SCELIBC_IO
+        // Configure 64KB stdio buffer for high throughput streaming (TheFloW / Rinnegatamante practice)
+        sceLibcBridge_setvbuf(ret, NULL, _IOFBF, 64 * 1024);
+#endif
+        if (fcache_is_cacheable_mode(mode)) {
+            fcache_populate(filename, ret);
+        }
+        sndprobe_track(filename, ret);
+        l_debug("fopen(%s, %s): %p", filename, mode, ret);
+    } else {
+        // Record non-existent file in negative cache to eliminate repeated SD searches
+        if (strchr(mode, 'r')) {
+            pthread_mutex_lock(&s_fcache_lock);
+            if (s_neg_cache_count < NEG_CACHE_SIZE) {
+                strncpy(s_neg_cache[s_neg_cache_count], filename, 255);
+                s_neg_cache[s_neg_cache_count][255] = '\0';
+                s_neg_cache_count++;
+            }
+            pthread_mutex_unlock(&s_fcache_lock);
+        }
+        if (!io_expected_miss(filename))
+            l_warn("fopen(%s, %s): %p", filename, mode, ret);
+    }
+
+    return ret;
+}
+
+int open_soloader(const char * path, int oflag, ...) {
+    bc_event("open", BC_RA);
+    if (strcmp(path, "/proc/cpuinfo") == 0) {
+        return open_soloader("app0:/cpuinfo", oflag);
+    } else if (strcmp(path, "/proc/meminfo") == 0) {
+        return open_soloader("app0:/meminfo", oflag);
+    }
+
+    char remapped[256];
+    if (remap_gameloft_sdcard_path(path, remapped, sizeof(remapped))) {
+        return open_soloader(remapped, oflag);
+    }
+
+    mode_t mode = 0666;
+    if (((oflag & BIONIC_O_CREAT) == BIONIC_O_CREAT) ||
+        ((oflag & BIONIC_O_TMPFILE) == BIONIC_O_TMPFILE)) {
+        va_list args;
+        va_start(args, oflag);
+        mode = (mode_t)(va_arg(args, int));
+        va_end(args);
+    }
+
+    int write_intent = (oflag & (BIONIC_O_WRONLY | BIONIC_O_RDWR | BIONIC_O_CREAT |
+                                 BIONIC_O_TRUNC | BIONIC_O_APPEND)) != 0;
+    oflag = oflags_bionic_to_newlib(oflag);
+    int ret = open(path, oflag, mode);
+    if (ret < 0 && strip_ipad2_prefix(path, remapped, sizeof(remapped))) {
+        l_info("[io] Fallback IPAD2a_: reintentando open('%s')", remapped);
+        ret = open(remapped, oflag, mode);
+    }
+
+    if (write_intent && ret >= 0) {
+        fcache_invalidate(path);
+    }
+
+    if (ret >= 0)
+        l_debug("open(%s, %x): %i", path, oflag, ret);
+    else
+        l_warn("open(%s, %x): %i", path, oflag, ret);
+    return ret;
+}
+
+int fstat_soloader(int fd, stat64_bionic * buf) {
+    struct stat st;
+    FILE *ff = fake_fd_file(fd);
+    if (ff) {
+        long cur = ftell_soloader(ff);
+        fseek_soloader(ff, 0, SEEK_END);
+        long size = ftell_soloader(ff);
+        fseek_soloader(ff, cur, SEEK_SET);
+        memset(&st, 0, sizeof(st));
+        st.st_mode = S_IFREG | 0666;
+        st.st_size = size;
+        stat_newlib_to_bionic(&st, buf);
+        return 0;
+    }
+    int res = fstat(fd, &st);
+
+    if (res == 0)
+        stat_newlib_to_bionic(&st, buf);
+
+    l_debug("fstat(%i): %i", fd, res);
+    return res;
+}
+
+int stat_soloader(const char * path, stat64_bionic * buf) {
+    bc_event("stat", BC_RA);
+    char remapped[256];
+    if (remap_gameloft_sdcard_path(path, remapped, sizeof(remapped))) {
+        return stat_soloader(remapped, buf);
+    }
+
+    l_debug("stat(%s)", path);
+
+    // Negative cache lookup for stat
+    pthread_mutex_lock(&s_fcache_lock);
+    for (int i = 0; i < s_neg_cache_count; i++) {
+        if (strcmp(s_neg_cache[i], path) == 0) {
+            pthread_mutex_unlock(&s_fcache_lock);
+            return -1;
+        }
+    }
+
+    // FCache lookup for stat
+    int entry_idx = fcache_find_entry_locked(path);
+    if (entry_idx >= 0) {
+        long size = s_fcache_entries[entry_idx].size;
+        pthread_mutex_unlock(&s_fcache_lock);
+        memset(buf, 0, sizeof(stat64_bionic));
+        buf->st_mode = S_IFREG | 0666;
+        buf->st_size = size;
+        buf->st_blksize = 4096;
+        buf->st_blocks = (size + 511) / 512;
+        l_debug("stat(%s): 0 (fcache hit)", path);
+        return 0;
+    }
+    pthread_mutex_unlock(&s_fcache_lock);
+
+    struct stat st;
+    int res = stat(path, &st);
+    if (res != 0 && strip_ipad2_prefix(path, remapped, sizeof(remapped))) {
+        l_info("[io] Fallback IPAD2a_: reintentando stat('%s')", remapped);
+        res = stat(remapped, &st);
+    }
+
+    if (res == 0)
+        stat_newlib_to_bionic(&st, buf);
+
+    l_debug("stat(%s): %i", path, res);
+    return res;
+}
+
+int fclose_soloader(FILE * f) {
+    fake_fd_release(f);
+    if (shf_is_handle(f)) {
+        pthread_mutex_lock(&s_shf_lock);
+        ((ShfHandle *)f)->used = 0;
+        pthread_mutex_unlock(&s_shf_lock);
+        return 0;
+    }
+    if (fcache_is_handle(f)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        ((FCacheHandle *)f)->entry_idx = -1;
+        pthread_mutex_unlock(&s_fcache_lock);
+        l_debug("fclose(%p): 0 (cache handle released)", f);
+        return 0;
+    }
+#ifdef USE_SCELIBC_IO
+    int ret = sceLibcBridge_fclose(f);
+#else
+    int ret = fclose(f);
+#endif
+
+    int ps = sndprobe_slot(f);
+    if (ps >= 0) {
+        l_info("[sndprobe] fclose(%p): reads=%d bytes=%ld", f, s_sndprobe[ps].reads,
+               s_sndprobe[ps].bytes);
+        s_sndprobe[ps].f = NULL;
+    }
+    l_debug("fclose(%p): %i", f, ret);
+    return ret;
+}
+
+
+size_t fread_soloader(void *ptr, size_t size, size_t nmemb, FILE *f) {
+    if (shf_is_handle(f)) return shf_read(ptr, size, nmemb, (ShfHandle *)f);
+    if (fcache_is_handle(f)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        FCacheHandle *h = (FCacheHandle *)f;
+        FCacheEntry *e = &s_fcache_entries[h->entry_idx];
+        long remaining = e->size - h->pos;
+        if (remaining < 0) remaining = 0;
+        size_t avail_items = (size == 0) ? 0 : ((size_t)remaining) / size;
+        size_t items = avail_items < nmemb ? avail_items : nmemb;
+        if (items > 0) {
+            memcpy(ptr, e->data + h->pos, items * size);
+            h->pos += (long)(items * size);
+        }
+        pthread_mutex_unlock(&s_fcache_lock);
+        return items;
+    }
+#ifdef USE_SCELIBC_IO
+    size_t r = sceLibcBridge_fread(ptr, size, nmemb, f);
+#else
+    size_t r = fread(ptr, size, nmemb, f);
+#endif
+    int ps = sndprobe_slot(f);
+    if (ps >= 0) {
+        s_sndprobe[ps].reads++;
+        s_sndprobe[ps].bytes += (long)(r * size);
+        if (sndprobe_should_log(ps))
+            l_info("[sndprobe] fread(%p, %u x %u) = %u (reads=%d, bytes=%ld, lr=0x%08x)", f,
+                   (unsigned)size, (unsigned)nmemb, (unsigned)r, s_sndprobe[ps].reads,
+                   s_sndprobe[ps].bytes, (unsigned)__builtin_return_address(0));
+    }
+    return r;
+}
+
+size_t fwrite_soloader(const void *ptr, size_t size, size_t nmemb, FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) {
+        l_warn("fwrite(%p): refused, read-only cache handle", f);
+        return 0;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_fwrite(ptr, size, nmemb, f);
+#else
+    return fwrite(ptr, size, nmemb, f);
+#endif
+}
+
+int fseek_soloader(FILE *f, long offset, int whence) {
+    if (shf_is_handle(f)) {
+        ShfHandle *h = (ShfHandle *)f;
+        long base = (whence == SEEK_SET) ? 0 : (whence == SEEK_CUR) ? h->pos : s_shf_size;
+        if (base + offset < 0) return -1;
+        h->pos = base + offset;
+        return 0;
+    }
+    if (fcache_is_handle(f)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        FCacheHandle *h = (FCacheHandle *)f;
+        FCacheEntry *e = &s_fcache_entries[h->entry_idx];
+        long base = (whence == SEEK_SET) ? 0 : (whence == SEEK_CUR) ? h->pos : e->size;
+        long newpos = base + offset;
+        int ok = newpos >= 0;
+        if (ok) h->pos = newpos;
+        pthread_mutex_unlock(&s_fcache_lock);
+        return ok ? 0 : -1;
+    }
+#ifdef USE_SCELIBC_IO
+    int r = sceLibcBridge_fseek(f, offset, whence);
+#else
+    int r = fseek(f, offset, whence);
+#endif
+    int ps = sndprobe_slot(f);
+    if (ps >= 0 && sndprobe_should_log(ps))
+        l_info("[sndprobe] fseek(%p, %ld, %d) = %d", f, offset, whence, r);
+    return r;
+}
+
+long ftell_soloader(FILE *f) {
+    if (shf_is_handle(f)) return ((ShfHandle *)f)->pos;
+    if (fcache_is_handle(f)) {
+        return ((FCacheHandle *)f)->pos;
+    }
+#ifdef USE_SCELIBC_IO
+    long r = sceLibcBridge_ftell(f);
+#else
+    long r = ftell(f);
+#endif
+    int ps = sndprobe_slot(f);
+    if (ps >= 0 && sndprobe_should_log(ps))
+        l_info("[sndprobe] ftell(%p) = %ld", f, r);
+    return r;
+}
+
+int fseeko_soloader(FILE *f, off_t offset, int whence) {
+    return fseek_soloader(f, (long)offset, whence);
+}
+
+off_t ftello_soloader(FILE *f) {
+    return (off_t)ftell_soloader(f);
+}
+
+void rewind_soloader(FILE *f) {
+    if (shf_is_handle(f)) {
+        ((ShfHandle *)f)->pos = 0;
+        return;
+    }
+    if (fcache_is_handle(f)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        ((FCacheHandle *)f)->pos = 0;
+        pthread_mutex_unlock(&s_fcache_lock);
+        return;
+    }
+    rewind(f);
+}
+
+int feof_soloader(FILE *f) {
+    if (shf_is_handle(f)) return ((ShfHandle *)f)->pos >= s_shf_size;
+    if (fcache_is_handle(f)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        FCacheHandle *h = (FCacheHandle *)f;
+        int at_eof = h->pos >= s_fcache_entries[h->entry_idx].size;
+        pthread_mutex_unlock(&s_fcache_lock);
+        return at_eof;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_feof(f);
+#else
+    return feof(f);
+#endif
+}
+
+int ferror_soloader(FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) return 0;
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_ferror(f);
+#else
+    return ferror(f);
+#endif
+}
+
+int fflush_soloader(FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) return 0;
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_fflush(f);
+#else
+    return fflush(f);
+#endif
+}
+
+int fgetc_soloader(FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) {
+        unsigned char c;
+        return fread_soloader(&c, 1, 1, f) == 1 ? (int)c : EOF;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_fgetc(f);
+#else
+    return fgetc(f);
+#endif
+}
+
+int getc_soloader(FILE *f) {
+    return fgetc_soloader(f);
+}
+
+int fputc_soloader(int c, FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) {
+        l_warn("fputc(%p): refused, read-only cache handle", f);
+        return EOF;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_fputc(c, f);
+#else
+    return fputc(c, f);
+#endif
+}
+
+int putc_soloader(int c, FILE *f) {
+    return fputc_soloader(c, f);
+}
+
+char *fgets_soloader(char *str, int n, FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) {
+        if (n <= 0) return NULL;
+        int i = 0;
+        for (; i < n - 1; i++) {
+            int c = fgetc_soloader(f);
+            if (c == EOF) {
+                if (i == 0) return NULL;
+                break;
+            }
+            str[i] = (char)c;
+            if (c == '\n') { i++; break; }
+        }
+        str[i] = '\0';
+        return str;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_fgets(str, n, f);
+#else
+    return fgets(str, n, f);
+#endif
+}
+
+int fputs_soloader(const char *str, FILE *f) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) {
+        l_warn("fputs(%p): refused, read-only cache handle", f);
+        return EOF;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_fputs(str, f);
+#else
+    return fputs(str, f);
+#endif
+}
+
+/*
+ * Bug #043: libstdc++ (estatica dentro del .so) implementa std::ifstream/ofstream con
+ * __basic_file: fopen() + fileno() y despues read()/write()/lseek() sobre ese fd. Con
+ * USE_SCELIBC_IO el FILE* es de SceLibc (y el de fcache ni siquiera tiene fd), pero
+ * read/write/lseek iban a newlib -> read() fallaba -> ios_base::failure
+ * "basic_filebuf::underflow error reading the file" -> abort (log 076, trofeo
+ * androidTrophy.dat en nativeNotifyTrophy_update). fileno() ahora devuelve un fd
+ * "falso" que referencia el FILE*, y los syscalls de fd lo redirigen a las funciones
+ * stdio (que ya saben manejar SceLibc y fcache).
+ */
+#define FAKE_FD_BASE 0x4000
+#define FAKE_FD_MAX 64
+static FILE *s_fake_fds[FAKE_FD_MAX];
+static pthread_mutex_t s_fake_fd_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static FILE *fake_fd_file(int fd) {
+    if (fd < FAKE_FD_BASE || fd >= FAKE_FD_BASE + FAKE_FD_MAX) return NULL;
+    return s_fake_fds[fd - FAKE_FD_BASE];
+}
+
+static void fake_fd_release(FILE *f) {
+    pthread_mutex_lock(&s_fake_fd_lock);
+    for (int i = 0; i < FAKE_FD_MAX; i++)
+        if (s_fake_fds[i] == f) s_fake_fds[i] = NULL;
+    pthread_mutex_unlock(&s_fake_fd_lock);
+}
+
+int fileno_soloader(FILE *f) {
+    if (!f) return -1;
+    int fd = -1;
+    pthread_mutex_lock(&s_fake_fd_lock);
+    for (int i = 0; i < FAKE_FD_MAX && fd < 0; i++)
+        if (s_fake_fds[i] == f) fd = FAKE_FD_BASE + i;
+    for (int i = 0; i < FAKE_FD_MAX && fd < 0; i++)
+        if (!s_fake_fds[i]) { s_fake_fds[i] = f; fd = FAKE_FD_BASE + i; }
+    pthread_mutex_unlock(&s_fake_fd_lock);
+    if (fd < 0) l_error("fileno(%p): tabla de fds falsos llena", f);
+    return fd;
+}
+
+ssize_t read_soloader(int fd, void *buf, size_t count) {
+    FILE *f = fake_fd_file(fd);
+    if (f) return (ssize_t)fread_soloader(buf, 1, count, f);
+    return read(fd, buf, count);
+}
+
+ssize_t write_soloader(int fd, const void *buf, size_t count) {
+    FILE *f = fake_fd_file(fd);
+    if (f) {
+        size_t n = fwrite_soloader(buf, 1, count, f);
+        return (n == 0 && count > 0) ? -1 : (ssize_t)n;
+    }
+    return write(fd, buf, count);
+}
+
+off_t lseek_soloader(int fd, off_t offset, int whence) {
+    FILE *f = fake_fd_file(fd);
+    if (f) {
+        if (fseek_soloader(f, (long)offset, whence) != 0) return -1;
+        return (off_t)ftell_soloader(f);
+    }
+    return lseek(fd, offset, whence);
+}
+
+int setvbuf_soloader(FILE *f, char *buf, int mode, size_t size) {
+    if (fcache_is_handle(f) || shf_is_handle(f)) return 0;
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_setvbuf(f, buf, mode, size);
+#else
+    return setvbuf(f, buf, mode, size);
+#endif
+}
+
+int ungetc_soloader(int c, FILE *f) {
+    if (shf_is_handle(f)) {
+        ShfHandle *h = (ShfHandle *)f;
+        if (h->pos <= 0) return EOF;
+        h->pos--;
+        return c;
+    }
+    if (fcache_is_handle(f)) {
+        pthread_mutex_lock(&s_fcache_lock);
+        FCacheHandle *h = (FCacheHandle *)f;
+        int ok = h->pos > 0;
+        if (ok) h->pos--;
+        pthread_mutex_unlock(&s_fcache_lock);
+        return ok ? c : EOF;
+    }
+#ifdef USE_SCELIBC_IO
+    return sceLibcBridge_ungetc(c, f);
+#else
+    return ungetc(c, f);
+#endif
+}
+
+int remove_soloader(const char *pathname) {
+    char remapped[512];
+    if (remap_gameloft_sdcard_path(pathname, remapped, sizeof(remapped)))
+        pathname = remapped;
+    fcache_invalidate(pathname);
+    return remove(pathname);
+}
+
+int unlink_soloader(const char *pathname) {
+    char remapped[512];
+    if (remap_gameloft_sdcard_path(pathname, remapped, sizeof(remapped)))
+        pathname = remapped;
+    fcache_invalidate(pathname);
+    return unlink(pathname);
+}
+
+int close_soloader(int fd) {
+    FILE *ff = fake_fd_file(fd);
+    if (ff) return fclose_soloader(ff);
+    int ret = close(fd);
+    l_debug("close(%i): %i", fd, ret);
+    return ret;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Directory enumeration.                                                     */
+/* newlib's opendir()/readdir() aborts inside SceLibc when ZPlatform scans the */
+/* content folder on hardware, so drive the native API directly and build a   */
+/* bionic-format dirent ourselves.                                            */
+/* ------------------------------------------------------------------------- */
+typedef struct {
+    SceUID fd;
+    int16_t seq;
+    dirent64_bionic ent;
+} soloader_DIR;
+
+DIR* opendir_soloader(char* _pathname) {
+    bc_event("opendir", BC_RA);
+    char remapped[512];
+    const char *dirpath = _pathname;
+    const char *content = content_dir_for(_pathname);
+    if (content) {
+        // Package discovery scans /sdcard, /game or /content*; point those
+        // scans at content/ even though the physical root directory exists.
+        dirpath = content;
+    } else if (remap_gameloft_sdcard_path(_pathname, remapped, sizeof(remapped))) {
+        dirpath = remapped;
+    }
+
+    SceUID fd = sceIoDopen(dirpath);
+    if (fd < 0 && content && strcmp(content, dirpath) != 0)
+        fd = sceIoDopen(content);
+    if (fd < 0) {
+        l_debug("opendir(\"%s\" -> \"%s\"): NULL", _pathname, dirpath);
+        return NULL;
+    }
+
+    soloader_DIR *d = calloc(1, sizeof(soloader_DIR));
+    if (!d) {
+        sceIoDclose(fd);
+        return NULL;
+    }
+    d->fd = fd;
+    l_debug("opendir(\"%s\" -> \"%s\"): fd=%d", _pathname, dirpath, fd);
+    return (DIR *) d;
+}
+
+struct dirent64_bionic * readdir_soloader(DIR * dir) {
+    if (!dir)
+        return NULL;
+
+    soloader_DIR *d = (soloader_DIR *) dir;
+    SceIoDirent sd;
+    memset(&sd, 0, sizeof(sd));
+
+    if (sceIoDread(d->fd, &sd) <= 0) {
+        l_debug("readdir(%p): end", dir);
+        return NULL;
+    }
+
+    memset(&d->ent, 0, sizeof(d->ent));
+    d->ent.d_ino = (int16_t) (++d->seq);
+    d->ent.d_off = 0;
+    d->ent.d_reclen = sizeof(d->ent);
+    d->ent.d_type = SCE_S_ISDIR(sd.d_stat.st_mode) ? DT_DIR : DT_REG;
+    strncpy(d->ent.d_name, sd.d_name, sizeof(d->ent.d_name) - 1);
+    l_debug("readdir(%p): %s", dir, d->ent.d_name);
+    return &d->ent;
+}
+
+int readdir_r_soloader(DIR * dirp, dirent64_bionic * entry,
+                       dirent64_bionic ** result) {
+    dirent64_bionic *e = readdir_soloader(dirp);
+    if (!e) {
+        if (result) *result = NULL;
+        return 0;
+    }
+    memcpy(entry, e, sizeof(dirent64_bionic));
+    if (result) *result = entry;
+    return 0;
+}
+
+int closedir_soloader(DIR * dir) {
+    if (!dir)
+        return 0;
+    soloader_DIR *d = (soloader_DIR *) dir;
+    sceIoDclose(d->fd);
+    free(d);
+    l_debug("closedir(%p)", dir);
+    return 0;
+}
+
+
+int fcntl_soloader(int fd, int cmd, ...) {
+    l_warn("fcntl(%i, %i, ...): not implemented", fd, cmd);
+    return 0;
+}
+
+int ioctl_soloader(int fd, int request, ...) {
+    // fd falso (FILE*): fallar para que libstdc++ (showmanyc/FIONREAD) caiga a fstat.
+    if (fake_fd_file(fd)) return -1;
+    l_warn("ioctl(%i, %i, ...): not implemented", fd, request);
+    return 0;
+}
+
+int fsync_soloader(int fd) {
+    int ret = fsync(fd);
+    l_debug("fsync(%i): %i", fd, ret);
+    return ret;
+}

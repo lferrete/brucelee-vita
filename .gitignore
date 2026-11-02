@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# NEVER commit game data, saves, logs or derived game assets.
+# ---------------------------------------------------------------------------
+data/
+*.apk
+*.obb
+*.pakh
+*.pakd*
+*.zpak
+tmp_save/
+logs/
+*.log
+
+# The personal LiveArea source icon is extracted from the user's APK.
+extras/livearea/source_icon.jpg
+extras/livearea_personal/
+
+# Internal engineering notes: not part of the public release.
+docs/ANDROID_TO_VITA_PORTING.md
+docs/AUDIO_PIPELINE.md
+docs/CASE_STUDY_BRUCE_LEE.md
+docs/CHECKLISTS.md
+docs/DEBUGGING_VITA.md
+docs/INPUT_AND_HUD.md
+docs/VITAMCP_WORKFLOW.md
+PORTING_PLAN.md
+README VITAGL.md
+.opencode/
+tools/make_livearea.py
+tools/sync_port_skill.ps1
+tools/emu/
+extras/scripts/
+
+# Build outputs and generated binaries.
+build/
+build_test/
+*.vpk
+*.velf
+*.self
+*.elf
+*.o
+*.a
+*.psp2dmp
+param.sfo
+SHA256SUMS.txt
+
+# Python / editors / OS.
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

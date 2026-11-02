@@ -1,0 +1,26 @@
+Bruce Lee: Dragon Warrior - PS Vita port
+========================================
+
+Port by Leandro Ferrete
+Port code Copyright (C) 2026 Leandro Ferrete (MIT).
+
+Original game: Bruce Lee: Dragon Warrior
+(c) Digital Legends / Sony Ericsson / Indiagames. All rights reserved.
+
+This VPK contains only the port executable and its metadata. It does not
+contain the original APK, the game's .so libraries, content packages, assets,
+or save files. The user must provide a legally obtained copy of the game.
+
+Third-party libraries and tools retain their own copyrights and licenses:
+so_util, FalsoJNI, vitaGL, kubridge, vitaShaRK/SceShaccCg, VitaSDK and others.
+See AUTHORS.md and LICENSE in the source repository.
+
+Verification:
+- log banner: "Port by Leandro Ferrete (v1.0)" + copyright
+- SFO PORT_AUTHOR: "Leandro Ferrete"
+- SFO PORT_VERSION: "1.0"
+- source headers: source/port_author.h, main.c, loader.c, java_shim.c
+- SHA-256: build/SHA256SUMS.txt
+
+The LiveArea remains free of visual credits by choice; attribution lives in
+the code, logs and VPK metadata.
