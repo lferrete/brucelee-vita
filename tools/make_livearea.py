@@ -1,29 +1,28 @@
 #!/usr/bin/env python3
 """
-PERSONAL LiveArea builder (optional).
+LiveArea builder.
 
-This uses the game icon from the user's legally obtained APK to make a personal
-LiveArea.  The generated art is derived from copyrighted game material: use it
-only on your own console and NEVER commit or redistribute it.
+This uses the game icon from the user's legally obtained APK to build the
+LiveArea art used by the VPK. The generated art is derived from copyrighted
+game material; it is included in this fan project for identification only and
+all rights remain with the original owners.
 
 Source:
   extras/livearea/source_icon.jpg   (res/drawable/icon.jpg from the user's APK)
 
-Outputs (git-ignored):
-  extras/livearea_personal/icon0.png   128x128
-  extras/livearea_personal/pic0.png    960x544
-  extras/livearea_personal/bg0.png     840x500
-  extras/livearea_personal/startup.png 280x158
-  extras/livearea_personal/template.xml
-  extras/loading_personal.rgb565       raw 960x544 RGB565
+Outputs (tracked):
+  extras/livearea/icon0.png    128x128
+  extras/livearea/pic0.png     960x544
+  extras/livearea/bg0.png      840x500
+  extras/livearea/startup.png  280x158
+  extras/loading.rgb565        raw 960x544 RGB565
 
-For the PUBLIC release use make_neutral_livearea.py instead.
+Review the image diff before committing.
 
 Pillow is required: pip install pillow
 
 Port code Copyright (C) 2026 Leandro Ferrete.
 """
-import shutil
 import struct
 from pathlib import Path
 import math
@@ -33,7 +32,6 @@ from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFo
 
 ROOT = Path(__file__).resolve().parent.parent
 LIVE = ROOT / "extras" / "livearea"
-PERSONAL = ROOT / "extras" / "livearea_personal"
 ICON_SRC = LIVE / "source_icon.jpg"
 
 FONT_IMPACT = "C:/Windows/Fonts/impact.ttf"
@@ -201,7 +199,7 @@ def make_pic0(icon):
     base = bottom_shade(base, 0.42, 205).convert("RGB")
     base = vignette(base, 0.52).convert("RGBA")
     add_title(base, 98, 28, 0.055, 0.665, max_width=int(w * 0.50))
-    save_indexed(base, PERSONAL / "pic0.png")
+    save_indexed(base, LIVE / "pic0.png")
 
 
 def make_bg0(icon):
@@ -213,7 +211,7 @@ def make_bg0(icon):
     base = bottom_shade(base, 0.48, 195).convert("RGB")
     base = vignette(base, 0.50).convert("RGBA")
     add_title(base, 86, 25, 0.055, 0.665, max_width=int(w * 0.52))
-    save_indexed(base, PERSONAL / "bg0.png")
+    save_indexed(base, LIVE / "bg0.png")
 
 
 def make_startup(icon):
@@ -251,34 +249,33 @@ def make_startup(icon):
     draw_spaced(d, (x + 1, y + 42), "DRAGON", sf, GOLD, spacing=2, stroke_width=1, stroke_fill=INK)
     draw_spaced(d, (x + 1, y + 56), "WARRIOR", sf, GOLD, spacing=2, stroke_width=1, stroke_fill=INK)
     base = vignette(base.convert("RGB"), 0.42).convert("RGBA")
-    save_indexed(base, PERSONAL / "startup.png")
+    save_indexed(base, LIVE / "startup.png")
 
 
 def make_icon(icon):
     im = icon.resize((128, 128), Image.Resampling.LANCZOS)
     im = ImageEnhance.Contrast(im).enhance(1.05)
     im = ImageEnhance.Sharpness(im).enhance(1.15)
-    save_indexed(im, PERSONAL / "icon0.png")
+    save_indexed(im, LIVE / "icon0.png")
 
 
 def make_loading():
-    """Raw RGB565 960x544 loading screen for the personal build."""
-    src = Image.open(PERSONAL / "pic0.png").convert("RGB")
+    """Raw RGB565 960x544 loading screen used by the build."""
+    src = Image.open(LIVE / "pic0.png").convert("RGB")
     if src.size != (960, 544):
         src = src.resize((960, 544), Image.Resampling.LANCZOS)
     buf = bytearray()
     for r, g, b in src.getdata():
         v = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
         buf += struct.pack("<H", v)
-    out = ROOT / "extras" / "loading_personal.rgb565"
+    out = ROOT / "extras" / "loading.rgb565"
     out.write_bytes(buf)
-    print(f"loading_personal.rgb565: 960x544 RGB565 {len(buf)} bytes")
+    print(f"loading.rgb565: 960x544 RGB565 {len(buf)} bytes")
 
 
 def main():
     if not ICON_SRC.exists():
         raise SystemExit(f"Missing source icon: {ICON_SRC}")
-    PERSONAL.mkdir(parents=True, exist_ok=True)
     icon = Image.open(ICON_SRC).convert("RGB")
     if icon.size != (256, 256):
         icon = icon.resize((256, 256), Image.Resampling.LANCZOS)
@@ -289,12 +286,8 @@ def main():
     make_icon(icon)
     make_loading()
 
-    tpl = LIVE / "template.xml"
-    if tpl.exists():
-        shutil.copy2(tpl, PERSONAL / "template.xml")
-
     for name in ("icon0.png", "pic0.png", "bg0.png", "startup.png"):
-        p = PERSONAL / name
+        p = LIVE / name
         im = Image.open(p)
         print(f"{name}: {im.size} {im.mode} {p.stat().st_size} bytes")
 

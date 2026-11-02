@@ -36,22 +36,12 @@ $sfo = Join-Path $BuildDir "param.sfo"
     $sfo
 
 if (-not $ArtDir) {
-    $personalDir = Join-Path $projectRoot "extras\livearea_personal"
-    if (Test-Path -LiteralPath (Join-Path $personalDir "icon0.png")) {
-        $ArtDir = $personalDir
-    } else {
-        $ArtDir = Join-Path $projectRoot "extras\livearea"
-    }
+    $ArtDir = Join-Path $projectRoot "extras\livearea"
 } elseif (-not [System.IO.Path]::IsPathRooted($ArtDir)) {
     $ArtDir = Join-Path $projectRoot $ArtDir
 }
 if (-not $LoadingFile) {
-    $personalLoading = Join-Path $projectRoot "extras\loading_personal.rgb565"
-    if (Test-Path -LiteralPath $personalLoading) {
-        $LoadingFile = $personalLoading
-    } else {
-        $LoadingFile = Join-Path $projectRoot "extras\loading.rgb565"
-    }
+    $LoadingFile = Join-Path $projectRoot "extras\loading.rgb565"
 } elseif (-not [System.IO.Path]::IsPathRooted($LoadingFile)) {
     $LoadingFile = Join-Path $projectRoot $LoadingFile
 }
