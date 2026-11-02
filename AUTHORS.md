@@ -1,44 +1,44 @@
-# Autoria e créditos
+# Authors and credits
 
-## Port para PS Vita
+## PS Vita port
 
-**Leandro Ferrete** — adaptação do loader, integração Android/ZSystem, input
-(físico, touch, HUD, D-pad), áudio (AudioTrack JNI → `sceAudioOut`, FIR
-44.1→48 kHz), diagnóstico no hardware, documentação e testes.
+**Leandro Ferrete** — loader adaptation, Android/ZSystem integration, input
+(physical, touch, HUD, D-pad), audio (AudioTrack JNI → `sceAudioOut`, 44.1→48
+kHz FIR), hardware diagnostics, documentation and testing.
 
-Copyright (C) 2026 Leandro Ferrete. O código original deste port é distribuído
-sob a licença MIT (veja `LICENSE`). A LiveArea não leva crédito visual; a
-atribuição fica no código, no banner de log e nos metadados do VPK.
+Copyright (C) 2026 Leandro Ferrete. The original port code is distributed under
+the MIT license (see `LICENSE`). The public LiveArea artwork is neutral; the
+port attribution lives in the source, log banner and VPK metadata.
 
-## Jogo original
+## Original game
 
 **Bruce Lee: Dragon Warrior** © Digital Legends / Sony Ericsson / Indiagames.
-Todos os direitos reservados. Este projeto **não** redistribui o APK, os `.so`,
-os pacotes de conteúdo, as texturas, os sons ou os saves do jogo. O usuário
-precisa fornecer uma cópia legal.
+All rights reserved. This project does **not** redistribute the APK, `.so`
+libraries, content packages, textures, sounds or save files. Users must provide
+a legally obtained copy.
 
-## Bases e bibliotecas de terceiros
+## Third-party components
 
 - **so_util** — Andy Nguyen (TheFloW), Rinnegatamante.
-- **FalsoJNI** — Volodymyr Atamanenko e contribuidores.
-- **vitaGL** — Rinnegatamante e contribuidores.
+- **FalsoJNI** — Volodymyr Atamanenko and contributors.
+- **vitaGL** — Rinnegatamante and contributors.
 - **kubridge** — TheFloW.
-- **vitaShaRK / SceShaccCg / ShaRKBR33D** — Rinnegatamante e contribuidores.
-- **fios / sha1 / zlib / newlib / VitaSDK** — respectivos autores.
-- O loader segue o modelo de ports Android do ecossistema Vita (GTA/Asphalt
-  e projetos relacionados); os créditos originais permanecem em `LICENSE` e
-  nos cabeçalhos dos arquivos derivados.
+- **vitaShaRK / SceShaccCg / ShaRKBR33D** — Rinnegatamante and contributors.
+- **fios / sha1 / zlib / newlib / VitaSDK** — their respective authors.
+- The loader follows the Android-port model of the Vita ecosystem (GTA/Asphalt
+  and related projects); the original credits remain in `LICENSE` and in the
+  headers of derived files.
 
-## Como identificar este port
+## How to identify this port
 
-- Banner de log: `Port by Leandro Ferrete (v1.0)` + copyright em
+- Log banner: `Port by Leandro Ferrete (v1.0)` and the copyright line in
   `ux0:data/brucelee/logs/`.
-- SFO: campos `PORT_AUTHOR=Leandro Ferrete` e `PORT_VERSION=1.0`.
-- VPK: `sce_sys/provenance.txt` com autor, versão e aviso legal.
-- Release: `build/SHA256SUMS.txt` com o hash do VPK.
-- Fonte: cabeçalhos em `source/port_author.h`, `source/main.c`,
+- SFO: `PORT_AUTHOR=Leandro Ferrete` and `PORT_VERSION=1.0`.
+- VPK: `sce_sys/provenance.txt` with author, version and legal notice.
+- Release: `build/SHA256SUMS.txt` with the VPK hash.
+- Source: headers in `source/port_author.h`, `source/main.c`,
   `source/loader.c`, `source/java_shim.c`, `CMakeLists.txt`, `make.sh`,
-  `build.sh` e ferramentas, além deste arquivo e do `README.md`.
+  `build.sh` and the tools.
+- The public LiveArea has no author watermark by choice.
 
-Veja `docs/AUTHORSHIP.md` para o procedimento de verificação e para a
-recomendação de assinatura/versionamento (git/GPG).
+See `docs/AUTHORSHIP.md` for the verification procedure and git/GPG guidance.

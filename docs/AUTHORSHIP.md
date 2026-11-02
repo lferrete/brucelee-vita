@@ -1,20 +1,20 @@
-# Autoria, atribuição e verificação
+# Authorship, attribution and verification
 
-> Como identificar que este port foi feito por **Leandro Ferrete**, como
-> provar a autoria do código do port e como publicá-lo sem se apropriar do
-> jogo original.
+> How to identify that this port was made by **Leandro Ferrete**, how to prove
+> authorship of the port code, and how to publish it without claiming the
+> original game.
 
 ---
 
-## 1. O que você pode reivindicar
+## 1. What you can claim
 
-Você pode reivindicar **o código original do port**: loader, integração
-Android/ZSystem, shims de input/áudio, ferramentas, scripts de build e
-documentação. Você **não** pode reivindicar o jogo, os `.so`, os assets, os
-saves ou as bibliotecas de terceiros. A LiveArea permanece sem crédito visual
-(por escolha); a atribuição fica no código, logs e metadados.
+You can claim **the original port code**: loader, Android/ZSystem integration,
+input/audio shims, tools, build scripts and documentation. You **cannot** claim
+the game, its `.so` libraries, assets, saves or third-party libraries. The
+public LiveArea remains free of visual credits by choice; attribution lives in
+the code, logs and metadata.
 
-A forma correta é:
+The correct notice is:
 
 ```
 Bruce Lee: Dragon Warrior — PS Vita port
@@ -25,59 +25,60 @@ Third-party libraries retain their own copyrights (see AUTHORS.md/LICENSE).
 
 ---
 
-## 2. Onde a autoria aparece
+## 2. Where authorship appears
 
-### 2.1 No código-fonte
+### 2.1 Source code
 
-- Cabeçalhos em `source/port_author.h`, `source/main.c`, `source/loader.c`,
+- Headers in `source/port_author.h`, `source/main.c`, `source/loader.c`,
   `source/loader.h`, `source/java_shim.c`, `source/java_shim.h`.
-- `CMakeLists.txt`, `make.sh`, `build.sh`, `tools/make_vpk.ps1` e
-  `tools/make_livearea.py` com o aviso de copyright do port.
-- `AUTHORS.md` com a divisão entre port, jogo original e terceiros.
-- `LICENSE` com a linha de copyright do port (somada aos autores originais).
-- `README.md` com a seção “Autor do port”.
+- `CMakeLists.txt`, `make.sh`, `build.sh`, `tools/make_vpk.ps1`,
+  `tools/make_neutral_livearea.py` and `tools/make_livearea.py` carry the port
+  copyright notice.
+- `AUTHORS.md` separates port, original game and third parties.
+- `LICENSE` adds the port copyright line to the original authors.
+- `README.md` has an "Authorship" section.
 
-### 2.2 No build/execução
+### 2.2 Build / runtime
 
-- Banner no log:
+- Log banner:
 
   ```
   Port by Leandro Ferrete (v1.0)
   Copyright (C) 2026 Leandro Ferrete
-  Build: <data> <hora>
+  Build: <date> <time>
   ```
 
-  Presente em todo `ux0:data/brucelee/logs/brucelee_NNN.log`.
+  Present in `ux0:data/brucelee/logs/brucelee_NNN.log`.
 
-- LiveArea: **sem crédito visual** (a arte é derivada do ícone do jogo e não
-  leva texto de autoria).
+- LiveArea: **no visual credit** by choice (the public art is neutral and does
+  not use game assets).
 
 - SFO (`sce_sys/param.sfo`):
-  - `TITLE` = nome do jogo;
+  - `TITLE` = game name;
   - `PORT_AUTHOR` = `Leandro Ferrete`;
   - `PORT_VERSION` = `1.0`;
   - `TITLE_ID` = `BRUCELEE1`.
 
 - VPK:
-  - `sce_sys/provenance.txt` com autor, versão, aviso legal e instrução de
-    que o VPK não contém o jogo;
-  - `build/SHA256SUMS.txt` com o hash do VPK.
+  - `sce_sys/provenance.txt` with author, version, legal notice and the
+    statement that the VPK does not contain the game;
+  - `build/SHA256SUMS.txt` with the VPK hash.
 
-### 2.3 Na release
+### 2.3 Release
 
-- Nome do arquivo de release, por exemplo:
-  `brucelee-dragon-warrior-vita-leandroferrete-v1.0.vpk`.
-- Página de release (GitHub/itch.io) com:
-  - seu nome;
-  - créditos do jogo original e das libs;
-  - hash SHA-256;
-  - screenshots/vídeo;
-  - data/versão.
-- Tags/commits assinados (ver §4).
+- Release file name, for example:
+  `brucelee-vita-v1.0.vpk`.
+- Release page (GitHub/itch.io) with:
+  - your name;
+  - original game and third-party credits;
+  - SHA-256 hash;
+  - date/version;
+  - installation instructions.
+- Signed tags/commits (see §4).
 
 ---
 
-## 3. Como verificar rapidamente
+## 3. Quick verification
 
 ### 3.1 Log
 
@@ -93,11 +94,11 @@ unzip -p brucelee.vpk sce_sys/provenance.txt
 unzip -p brucelee.vpk sce_sys/param.sfo | strings | grep -i -E "PORT_AUTHOR|Leandro"
 ```
 
-### 3.3 SFO / proveniência
+### 3.3 SFO / provenance
 
-Além do `PORT_AUTHOR`, o SFO contém `PORT_VERSION=1.0`. O arquivo
-`sce_sys/provenance.txt` dentro do VPK repete autor, versão, aviso legal e a
-declaração de que o VPK não contém o jogo.
+Besides `PORT_AUTHOR`, the SFO contains `PORT_VERSION=1.0`. The
+`sce_sys/provenance.txt` file repeats the author, version, legal notice and the
+statement that the VPK does not contain the game.
 
 ### 3.4 Hash
 
@@ -106,23 +107,23 @@ sha256sum brucelee.vpk
 cat build/SHA256SUMS.txt
 ```
 
-O hash só prova que o arquivo é o mesmo que você publicou; não prova autoria
-por si só. Combine com assinatura (GPG) e histórico git.
+The hash only proves that the file is the one you published; it does not prove
+authorship by itself. Combine it with signing (GPG) and git history.
 
 ---
 
-## 4. Versionamento e assinatura
+## 4. Versioning and signing
 
-O repositório oficial é:
+The official repository is:
 
 ```
 https://github.com/lferrete/brucelee-vita
 ```
 
-A branch `main` é protegida: o owner mantém o bypass de administrador; qualquer
-outro colaborador (se um dia houver) só entra via pull request aprovado. O
-commit inicial e a tag usam o e-mail noreply do GitHub para não expor o e-mail
-de trabalho:
+The `main` branch is protected: the owner keeps the administrator bypass; any
+other collaborator (if one is ever added) must go through an approved pull
+request. The initial commit and tag use the GitHub noreply address to avoid
+exposing a work email:
 
 ```bash
 git config user.name "Leandro Ferrete"
@@ -131,50 +132,50 @@ git commit -m "Bruce Lee: Dragon Warrior - PS Vita port by Leandro Ferrete"
 git tag -a v1.0 -m "Port by Leandro Ferrete"
 ```
 
-Para contribuir sem permissão de push:
+To contribute without push permission:
 
 ```bash
 git clone https://github.com/lferrete/brucelee-vita.git
-# fork no GitHub, branch, commit, pull request
+# fork on GitHub, create a branch, commit and open a pull request
 ```
 
-Opcional (recomendado para release):
+Optional (recommended for releases):
 
 ```bash
-gpg --full-generate-key          # se ainda não tiver chave
+gpg --full-generate-key          # if you do not have a key yet
 git config user.signingkey <KEY_ID>
 git tag -s v1.0 -m "Port by Leandro Ferrete"
 git verify-tag v1.0
 ```
 
-Publique o repositório e a release; o commit/tag assinado e o hash do VPK
-formam uma prova razoável de que aquela build saiu de você.
+Publish the repository and release; the signed commit/tag and the VPK hash form
+a reasonable proof that the build came from you.
 
-> Não use e-mail/identidade de outra pessoa. Se não quiser expor e-mail,
-> use o e-mail noreply do seu provedor (ex.: GitHub `users.noreply`).
-
----
-
-## 5. O que não fazer
-
-- Não coloque seu copyright no jogo, nos `.so`, nos assets ou nos saves.
-- Não redistribua o APK, os `.so`, os pacotes ou a arte original.
-- Não remova os créditos de so_util/FalsoJNI/vitaGL/kubridge.
-- Não altere a licença MIT dos arquivos derivados para uma licença mais
-  restritiva; adicione sua linha de copyright e mantenha os avisos originais.
+> Do not use another person's identity/email. If you do not want to expose an
+> email, use your provider's noreply address (e.g. GitHub `users.noreply`).
 
 ---
 
-## 6. Checklist de autoria
+## 5. What not to do
 
-- [ ] `AUTHORS.md` com port/jogo/terceiros.
-- [ ] `LICENSE` com copyright do port + autores originais.
-- [ ] `README.md` com “Autor do port”.
-- [ ] Cabeçalhos em `main.c`, `loader.c`, `java_shim.c`.
-- [ ] Banner de log com nome + data.
-- [ ] LiveArea **sem** crédito visual (escolha do autor).
+- Do not put your copyright on the game, its `.so` libraries, assets or saves.
+- Do not redistribute the APK, `.so` files, packages or original artwork.
+- Do not remove so_util/FalsoJNI/vitaGL/kubridge credits.
+- Do not change the MIT license of derived files to a more restrictive one;
+  add your copyright line and keep the original notices.
+
+---
+
+## 6. Authorship checklist
+
+- [ ] `AUTHORS.md` separates port/game/third parties.
+- [ ] `LICENSE` contains the port copyright plus original authors.
+- [ ] `README.md` has an "Authorship" section.
+- [ ] Headers in `main.c`, `loader.c`, `java_shim.c`, `port_author.h`.
+- [ ] Log banner with name + date.
+- [ ] LiveArea **without** visual credit (author's choice).
 - [ ] SFO `PORT_AUTHOR`/`PORT_VERSION`.
-- [ ] `sce_sys/provenance.txt` dentro do VPK.
+- [ ] `sce_sys/provenance.txt` inside the VPK.
 - [ ] `build/SHA256SUMS.txt`.
-- [ ] Release publicada com créditos e hash.
-- [ ] (Opcional) git commit/tag assinado com GPG.
+- [ ] Release published with credits and hash.
+- [ ] (Optional) signed git commit/tag with GPG.

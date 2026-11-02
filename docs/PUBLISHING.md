@@ -1,84 +1,88 @@
-# Publicação e proteção do repositório
+# Publishing and repository protection
 
-> Como este port é publicado de forma segura, o que entra no repositório e como
-> impedir que terceiros façam push/commit na `main`.
-
----
-
-## 1. O que os outros ports fazem
-
-Padrão observado em ports Android → Vita (exemplos públicos):
-
-- **Rinnegatamante/32secs_vita**: repositório com loader, LiveArea e README;
-  nenhum `.so`/asset do jogo. O README manda o usuário obter o APK legalmente
-  e extrair `libgame.so`/assets para `ux0:data/...`. O VPK fica na aba
-  Releases.
-- **Rinnegatamante/hrm-vita**: mesmo modelo; o `.gitignore` só exclui `build`
-  e a pasta local de dados; o release inclui um `datafiles.zip` do port (não
-  do jogo) e o VPK.
-- **TheFloW/so_util**: loader original; usado como base por vários ports.
-
-Conclusão: **código do port + documentação + VPK de loader** podem ser
-públicos; **dados do jogo não**. O README deve dizer explicitamente que o
-usuário precisa de uma cópia legal.
-
-Este projeto vai um passo além por segurança:
-
-- A LiveArea do release usa **arte neutra** (texto/gradiente), sem rosto,
-  logo, ícone ou screenshots do jogo.
-- O repositório não inclui notas internas de engenharia reversa (EULA,
-  offsets, caso Bruce Lee); elas ficam no `.gitignore`.
-- O VPK de release contém `eboot.bin`, `sce_sys/` e `provenance.txt`, mas
-  **nenhum** `.so`, `Core.pakh`, `Core.pakd000`, `data.zpak` ou save.
+> How this port is published safely, what goes into the repository, and how to
+> prevent third parties from pushing/committing to `main`.
 
 ---
 
-## 2. Checklist legal antes de publicar
+## 1. What other ports do
 
-- [ ] `git ls-files` não contém `.so`, `.apk`, `.obb`, `.pakh`, `.pakd*`,
-      `.zpak`, save, log ou arte derivada do jogo.
-- [ ] `extras/livearea/source_icon.jpg` está ignorado.
-- [ ] `build/` e `data/` estão ignorados.
-- [ ] O VPK de release foi gerado com `tools/make_neutral_livearea.py`.
-- [ ] `unzip -l build/brucelee.vpk` não mostra dados do jogo.
-- [ ] `README.md`/`LEGAL.md` deixam claro que o usuário precisa da cópia legal.
-- [ ] `AUTHORS.md` mantém os créditos originais e de terceiros.
-- [ ] O release não anexa APK/dados/saves.
-- [ ] Há um canal de takedown (issues do GitHub) em `LEGAL.md`.
+Pattern observed in public Android → Vita ports:
+
+- **Rinnegatamante/32secs_vita**: repository with loader, LiveArea and README;
+  no game `.so`/assets. The README tells users to obtain the APK legally and
+  extract `libgame.so`/assets to `ux0:data/...`. The VPK is published in the
+  Releases tab.
+- **Rinnegatamante/hrm-vita**: same model; `.gitignore` only excludes `build`
+  and the local data folder; the release includes a port `datafiles.zip` (not
+  the game) plus the VPK.
+- **TheFloW/so_util**: the original loader used by many ports.
+
+Conclusion: **port code + documentation + loader VPK** can be public; **game
+data cannot**. The README must state that users need a legal copy.
+
+This project goes further for safety:
+
+- The release LiveArea uses **neutral artwork** (text/gradient), with no
+  portrait, logo, icon or screenshots from the game.
+- The repository does not include internal reverse-engineering notes (EULA,
+  offsets, Bruce Lee case study); they are in `.gitignore`.
+- The release VPK contains `eboot.bin`, `sce_sys/` and `provenance.txt`, but
+  **no** `.so`, `Core.pakh`, `Core.pakd000`, `data.zpak` or saves.
+- The personal LiveArea generator is published, but the copyrighted generated
+  art is git-ignored and must not be distributed.
 
 ---
 
-## 3. Criar o repositório público
+## 2. Legal checklist before publishing
+
+- [ ] `git ls-files` contains no `.so`, `.apk`, `.obb`, `.pakh`, `.pakd*`,
+      `.zpak`, save, log or game-derived art.
+- [ ] `extras/livearea/source_icon.jpg` is ignored.
+- [ ] `extras/livearea_personal/` and `extras/loading_personal.rgb565` are
+      ignored.
+- [ ] `build/` and `data/` are ignored.
+- [ ] The release VPK was generated with `tools/make_neutral_livearea.py`.
+- [ ] `unzip -l build/brucelee.vpk` shows no game data.
+- [ ] `README.md`/`LEGAL.md` state that users need a legal copy.
+- [ ] `AUTHORS.md` keeps original and third-party credits.
+- [ ] The release does not attach the APK/data/saves.
+- [ ] A takedown channel (GitHub Issues) is described in `LEGAL.md`.
+
+---
+
+## 3. Create the public repository
 
 ### 3.1 Manual (GitHub web)
 
-1. Crie um repositório **público** chamado `brucelee-vita`.
-2. Não inicialize com README/.gitignore (o repositório local já tem).
-3. Em **Settings → Collaborators**, não adicione ninguém.
-4. Em **Settings → Features**, deixe Issues ligado; desligue Wiki, Projects e
-   Discussions (opcional).
-5. Em **Settings → General**, desligue Auto-merge; permita apenas Squash
-   merge; habilite “Automatically delete head branches”.
-6. Em **Settings → Actions → General**, use permissões **read-only** e desligue
-   “Allow GitHub Actions to create and approve pull requests”.
-7. Em **Settings → Branches/Rulesets**, crie a proteção da `main` (§4).
+1. Create a **public** repository named `brucelee-vita`.
+2. Do not initialize with a README/.gitignore (the local repository already
+   has them).
+3. In **Settings → Collaborators**, add nobody.
+4. In **Settings → Features**, keep Issues on; disable Wiki, Projects and
+   Discussions (optional).
+5. In **Settings → General**, disable auto-merge; allow only squash merge;
+   enable "Automatically delete head branches".
+6. In **Settings → Actions → General**, use **read-only** permissions and
+   disable "Allow GitHub Actions to create and approve pull requests".
+7. In **Settings → Branches/Rulesets**, protect `main` (§4).
 
-### 3.2 Com GitHub CLI
+### 3.2 GitHub CLI
 
 ```bash
 gh repo create brucelee-vita --public --source=. --remote=origin --push
 ```
 
-Depois aplique as proteções com `tools/setup_github_protection.ps1` (§5).
+Then apply protections with `tools/setup_github_protection.ps1` (§5).
 
 ---
 
-## 4. Proteção da `main` (o importante)
+## 4. Protecting `main` (the important part)
 
-Objetivo: **ninguém além de você faz push/commit direto na `main`**; qualquer
-contribuição externa passa por PR e sua revisão.
+Goal: **nobody except you can push/commit directly to `main`**; any external
+contribution goes through a pull request and your review.
 
-Configuração de branch protection/ruleset para `main`:
+Branch protection/ruleset for `main`:
 
 - [x] Require a pull request before merging.
 - [x] Require approvals: **1**.
@@ -87,114 +91,114 @@ Configuração de branch protection/ruleset para `main`:
 - [x] Require linear history.
 - [x] Do not allow force pushes.
 - [x] Do not allow deletions.
-- [x] **Sem colaboradores** — em repositório pessoal, só o owner pode fazer
-      push por padrão. O GitHub não permite “restrict users” em repo pessoal;
-      a proteção contra terceiros é: nenhum collaborator + PR obrigatório com
-      aprovação. Se um dia adicionar um collaborator, ele só entra via PR
-      aprovado por você.
-- [x] Allow the owner/admin to bypass (para você não ficar trancado fora).
-      Se quiser exigir PR até de você, desligue o bypass — mas aí você precisa
-      de outro revisor para aprovar.
-- [ ] Require signed commits (opcional; exige GPG/SSH configurado).
-- [ ] Require deployments/status checks (não há CI obrigatório).
+- [x] **No collaborators.** On a personal repository, GitHub does not allow
+      user/team "restrictions"; the protection against third parties is: no
+      collaborators + required PR/approval. If you ever add a collaborator,
+      they can only merge through a pull request approved by you.
+- [x] Allow the owner/admin to bypass (so you are not locked out). If you want
+      even your own changes to require a PR, disable the bypass — but then you
+      need another reviewer to approve.
+- [ ] Require signed commits (optional; requires GPG/SSH).
+- [ ] Require deployments/status checks (there is no mandatory CI).
 
-Proteção de tags `v*` (ruleset):
+Tag protection for `v*` (ruleset):
 
-- [x] Restrict deletions/updates/non-fast-forward para tags `v*`.
-- [x] Só o owner pode criar/atualizar releases.
+- [x] Restrict deletions/updates/non-fast-forward for `v*` tags.
+- [x] Only the owner can create/update releases.
 
-Configurações extras:
+Extra settings:
 
-- Sem colaboradores.
-- Issues abertas para bugs (sem anexos de jogo).
-- PRs de forks são bem-vindos, mas **só você mergeia**.
-- Forks: você pode manter habilitado para permitir PRs; eles não têm push no
-  seu repositório. Se quiser fechar totalmente, desabilite “Allow forking”,
-  mas aí ninguém consegue abrir PR.
-- Wiki/Projects/Discussions desligados para reduzir superfície.
-- Sem `GITHUB_TOKEN` com write em workflows; sem Actions não revisadas.
+- No collaborators.
+- Issues open for bugs (no game attachments).
+- PRs from forks are welcome, but **only you merge**.
+- Forks: keep them enabled if you want PRs; they cannot push to your
+  repository. To close contributions entirely, disable "Allow forking".
+- Wiki/Projects/Discussions off to reduce surface.
+- No write-capable `GITHUB_TOKEN` workflows; disable untrusted Actions.
 
-> A API de branch protection exige permissão de administração no repositório.
-> Se o token não tiver, faça pela UI; a configuração é a mesma.
+> The branch protection API requires repository administration permission. If
+> the token does not have it, use the UI; the configuration is the same.
 
 ---
 
-## 5. Script de proteção
+## 5. Protection script
 
-`tools/setup_github_protection.ps1` aplica:
+`tools/setup_github_protection.ps1` applies:
 
-- configurações do repositório (issues, merge, auto-delete, signoff);
-- branch protection da `main` (PR obrigatório, 1 aprovação, linear history,
-  sem force/deletion, push restrito ao owner, bypass do admin);
-- permissões read-only do Actions e desabilita aprovação automática de PRs.
+- repository settings (issues, merge, auto-delete, signoff);
+- `main` branch protection (required PR, 1 approval, linear history, no
+  force/deletion, owner admin bypass; no user restrictions);
+- read-only Actions permissions and no automatic PR approval;
+- a `v*` tag ruleset.
 
-Uso (nunca commite o token):
+Usage (never commit the token):
 
 ```powershell
-$env:GITHUB_TOKEN = "ghp_..."   # token com admin do repo
+$env:GITHUB_TOKEN = "ghp_..."   # token with repository administration
 powershell -ExecutionPolicy Bypass -File tools\setup_github_protection.ps1 `
   -Owner lferrete -Repo brucelee-vita -Branch main
 ```
 
-O script não imprime o token. Se a API recusar (403), use a UI do GitHub com o
-checklist do §4.
+The script never prints the token. If the API returns 403, use the GitHub UI
+with the checklist in §4.
 
 ---
 
 ## 6. Release
 
-1. Gere a arte neutra:
+1. Generate neutral artwork:
    `py -3 tools/make_neutral_livearea.py`
-2. Compile e empacote:
-   `bash make.sh` e `powershell -File tools/make_vpk.ps1`.
-3. Verifique o VPK:
+2. Build and package:
+   `bash make.sh` and `powershell -File tools/make_vpk.ps1`.
+3. Verify the VPK:
    ```bash
    unzip -l build/brucelee.vpk
-   # não deve listar .so/.pakh/.pakd/.zpak/.apk/save
+   # must not list .so/.pakh/.pakd/.zpak/.apk/save
    ```
-4. Crie a tag `v1.0` e o release no GitHub.
-5. Anexe **somente**:
+4. Create the `v1.0` tag and the GitHub release.
+5. Attach **only**:
    - `brucelee.vpk`
    - `SHA256SUMS.txt`
-6. No corpo do release, inclua:
-   - aviso de port não oficial;
-   - requisitos e link para `docs/INSTALL.md`;
-   - controles;
-   - créditos;
-   - hash SHA-256;
-   - “game data not included; use your own legal copy”.
-7. Não anexe screenshots do jogo nem dados. A imagem neutra da LiveArea já
-   está no VPK.
+6. In the release body, include:
+   - unofficial port notice;
+   - requirements and a link to `docs/INSTALL.md`;
+   - controls;
+   - credits;
+   - SHA-256 hash;
+   - "game data not included; use your own legal copy".
+7. Do not attach game screenshots or data. The neutral LiveArea art is already
+   inside the VPK.
 
 ---
 
 ## 7. Takedown
 
-Se um detentor de direitos reclamar:
+If a rights holder complains:
 
-1. Não discuta; remova/restrinja o material contestado o quanto antes.
-2. Se for um asset/arte, substitua por arte neutra.
-3. Se for o próprio port, arquive o repositório/release e comunique.
-4. Registre a decisão no issue/commit.
+1. Do not argue; remove/restrict the contested material as soon as possible.
+2. If it is an asset/artwork, replace it with neutral art.
+3. If it is the port itself, archive the repository/release and notify.
+4. Record the decision in the issue/commit.
 
-O canal público é a aba **Issues** do repositório (ver `LEGAL.md`).
+The public channel is the repository's **Issues** tab (see `LEGAL.md`).
 
 ---
 
-## 8. O que fica fora do repositório público
+## 8. What stays out of the public repository
 
-O `.gitignore` exclui:
+`.gitignore` excludes:
 
 - `data/`, `build/`, `.so`, `.apk`, `.obb`, `.pakh`, `.pakd*`, `.zpak`,
   saves/logs;
-- `extras/livearea/source_icon.jpg` e a arte pessoal gerada a partir do APK;
+- `extras/livearea/source_icon.jpg`, `extras/livearea_personal/`,
+  `extras/loading_personal.rgb565`;
 - `PORTING_PLAN.md`, `README VITAGL.md`;
 - `docs/ANDROID_TO_VITA_PORTING.md`, `docs/AUDIO_PIPELINE.md`,
   `docs/CASE_STUDY_BRUCE_LEE.md`, `docs/CHECKLISTS.md`,
   `docs/DEBUGGING_VITA.md`, `docs/INPUT_AND_HUD.md`,
   `docs/VITAMCP_WORKFLOW.md`;
-- `.opencode/`, `tools/make_livearea.py`, `tools/sync_port_skill.ps1`.
+- `.opencode/`, `tools/sync_port_skill.ps1`.
 
-Esses arquivos continuam na sua máquina para desenvolvimento, mas não vão para
-o GitHub. Se um dia quiser publicar notas técnicas, sanitize EULA/offsets e
-segredos antes.
+Those files remain on your machine for development but are not published. If
+you ever want to publish technical notes, sanitize EULA/offsets and secrets
+first.

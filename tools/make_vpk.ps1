@@ -8,7 +8,9 @@
 # Port code Copyright (C) 2026 Leandro Ferrete.
 param(
     [string]$BuildDir = "",
-    [string]$OutFile = ""
+    [string]$OutFile = "",
+    [string]$ArtDir = "",
+    [string]$LoadingFile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,9 +35,19 @@ $sfo = Join-Path $BuildDir "param.sfo"
     "Bruce Lee: Dragon Warrior" `
     $sfo
 
-$assets = Join-Path $projectRoot "extras\livearea"
+if (-not $ArtDir) {
+    $ArtDir = Join-Path $projectRoot "extras\livearea"
+} elseif (-not [System.IO.Path]::IsPathRooted($ArtDir)) {
+    $ArtDir = Join-Path $projectRoot $ArtDir
+}
+if (-not $LoadingFile) {
+    $LoadingFile = Join-Path $projectRoot "extras\loading.rgb565"
+} elseif (-not [System.IO.Path]::IsPathRooted($LoadingFile)) {
+    $LoadingFile = Join-Path $projectRoot $LoadingFile
+}
+$assets = $ArtDir
 $provenance = Join-Path $projectRoot "extras\provenance.txt"
-$loading = Join-Path $projectRoot "extras\loading.rgb565"
+$loading = $LoadingFile
 & (Join-Path $vitasdk "bin\vita-pack-vpk.exe") `
     -a "$assets\icon0.png=sce_sys/icon0.png" `
     -a "$assets\pic0.png=sce_sys/pic0.png" `

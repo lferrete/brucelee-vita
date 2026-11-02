@@ -1,85 +1,87 @@
-# Solução de problemas
+# Troubleshooting
 
-> Antes de tudo: o VPK **não** contém o jogo. Se faltar `.so`/pacote, o loader
-> não tem como adivinhar. Confira o layout em `docs/INSTALL.md`.
+> First: the VPK does **not** contain the game. If `.so` files or packages are
+> missing, the loader cannot guess them. Check the layout in `docs/INSTALL.md`.
 
 ---
 
-## 1. O jogo não abre / tela preta / volta para a LiveArea
+## 1. Game does not launch / black screen / returns to LiveArea
 
-1. Confira **kubridge** e **FdFix** no `ux0:tai/config.txt` (`*KERNEL`).
-2. Confira `ur0:data/libshacccg.suprx`.
-3. Confira `ux0:data/brucelee/lib/armeabi/libdefault.so` e `libzplatform.so`.
-4. Confira `assets/BruceLee.zpak`, `content/Core.pakh`,
+1. Check **kubridge** and **FdFix** in `ux0:tai/config.txt` (`*KERNEL`).
+2. Check `ur0:data/libshacccg.suprx`.
+3. Check `ux0:data/brucelee/lib/armeabi/libdefault.so` and `libzplatform.so`.
+4. Check `assets/BruceLee.zpak`, `content/Core.pakh`,
    `content/Core.pakd000`, `content/data.zpak`.
-5. Veja a última linha de `ux0:data/brucelee/logs/brucelee_NNN.log`.
+5. Read the last lines of `ux0:data/brucelee/logs/brucelee_NNN.log`.
 
-Erros comuns no log:
+Common log errors:
 
-- `missing shared object`: falta uma `.so`.
-- `Unresolved import`: build/loader inconsistente; use o VPK oficial.
-- `EnumeratePackages` vazio: pacotes/paths errados.
-- `CreateZdkDisplay`/shader: falta `libshacccg.suprx` ou cache.
+- `missing shared object`: a `.so` is missing.
+- `Unresolved import`: inconsistent build; use the official VPK.
+- Empty `EnumeratePackages`: wrong packages/paths.
+- `CreateZdkDisplay`/shader: missing `libshacccg.suprx` or cache.
 
-## 2. “Missing shared object”
+## 2. "Missing shared object"
 
-Copie a `.so` que falta para `ux0:data/brucelee/lib/armeabi/`. O layout mínimo
-é `libdefault.so` + `libzplatform.so` (+ `libjava-activity.so`).
+Copy the missing `.so` to `ux0:data/brucelee/lib/armeabi/`. The minimum layout
+is `libdefault.so` + `libzplatform.so` (+ `libjava-activity.so`).
 
-## 3. Não encontra o pacote / tela de download
+## 3. Package not found / download screen
 
-Faltam `Core.pakh`/`Core.pakd000` ou `content/data.zpak`. Extraia do
-`data.zpak` da sua cópia legal. Veja `docs/INSTALL.md` §3.
+`Core.pakh`/`Core.pakd000` or `content/data.zpak` is missing. Extract them from
+your legal `data.zpak`. See `docs/INSTALL.md` §3.
 
-## 4. Sem áudio
+## 4. No audio
 
-1. Na primeira tela, escolha **YES** (“enable sound”). Se escolheu NO, o jogo
-   fica mudo.
-2. Confira o volume do Vita.
-3. Veja o log: `AudioTrack: sceAudioOut aberto`, `[at] writes=...`.
-4. O save pode ter `sound_volume`/`music_volume` em 0; abra as opções do jogo
-   ou use um save novo.
-5. O port não altera o volume do sistema; não mexa nele sem querer.
+1. On the first screen, choose **YES** ("enable sound"). Choosing NO mutes the
+   game.
+2. Check the Vita volume.
+3. Check the log: `AudioTrack: sceAudioOut aberto`, `[at] writes=...`.
+4. The save may have `sound_volume`/`music_volume` at 0; use the in-game
+   options or a fresh save.
+5. The port does not change the system volume; do not change it accidentally.
 
-## 5. Controles estranhos / pause
+## 5. Strange controls / pause
 
-- O port mapeia D-pad, analógico, face buttons, Start e touch.
-- Plugins de remapeamento/overlay podem interceptar o pad; desative-os para
-  testar.
-- No pause: Cross confirma; Circle fecha; nos submenus, Circle volta.
-- Se o input não responde, veja se o jogo está em transição de tela; aguarde.
+- The port maps D-pad, analog, face buttons, Start and touch.
+- Pad-remapping/overlay plugins can intercept input; disable them while
+  testing.
+- In the pause menu: Cross confirms; Circle closes; in submenus, Circle goes
+  back.
+- If input does not respond, check whether the game is transitioning screens;
+  wait a moment.
 
-## 6. Save não carrega / corrompeu
+## 6. Save does not load / is corrupted
 
-- Faça backup de `ux0:data/brucelee/save/`.
-- Não edite o save com o jogo aberto.
-- Se trocou de versão, volte o backup.
+- Back up `ux0:data/brucelee/save/`.
+- Do not edit the save while the game is running.
+- If you changed versions, restore the backup.
 
-## 7. LiveArea antiga em cache
+## 7. Old LiveArea art cached
 
-Se a arte da LiveArea não atualizar após instalar um VPK novo, reinicie o
-console ou atualize a LiveArea (o Vita cacheia ícones/fundos).
+If the LiveArea artwork does not update after installing a new VPK, reboot the
+console or refresh the LiveArea (the Vita caches icons/backgrounds).
 
 ## 8. Performance
 
-- O jogo roda ~60 FPS no Vita.
-- Opcional: PSVshell para overclock (não incluso).
-- Feche outros apps/plugins pesados.
+- The game runs at ~60 FPS on the Vita.
+- Optional: PSVshell for overclocking (not bundled).
+- Close other apps/heavy plugins.
 
-## 9. Como reportar um bug
+## 9. Reporting a bug
 
-Abra uma issue com:
+Open an issue with:
 
-- versão do port (Release/commit);
-- versão do jogo (1.15.26) e ABI (`armeabi`);
+- port version (Release/commit);
+- game version (1.15.26) and ABI (`armeabi`);
 - CFW/console;
-- passos para reproduzir;
-- trecho de `ux0:data/brucelee/logs/brucelee_NNN.log`.
+- steps to reproduce;
+- the relevant part of `ux0:data/brucelee/logs/brucelee_NNN.log`.
 
-**Não** anexe APK, `.so`, pacotes, saves ou links de download. Issues com
-material protegido serão fechadas. Veja `LEGAL.md`.
+**Do not** attach the APK, `.so` files, packages, saves, or download links.
+Issues containing protected material will be closed. See `LEGAL.md`.
 
-## 10. “Freeze” de ~110 segundos
+## 10. ~110-second "freeze"
 
-A tela desligou. Ligue a tela e continue; durante o desenvolvimento, use
-no-sleep/keep-awake. Não é necessariamente um crash.
+The display turned off. Turn it on and continue; during development, use
+no-sleep/keep-awake. It is not necessarily a crash.

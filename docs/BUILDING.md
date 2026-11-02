@@ -1,25 +1,25 @@
-# Compilando o port
+# Building the port
 
-> Guia para desenvolvedores. O repositório não inclui dados do jogo.
+> Developer guide. The repository does not include game data.
 
 ---
 
-## 1. Requisitos
+## 1. Requirements
 
-- **VitaSDK** compilado com softfp (`arm-vita-eabi`).
-- **MSYS2** com `make`, `cmake`, `bash`.
-- Bibliotecas vendorizadas em `lib/`:
-  - `vitaGL` (com softfp)
+- **VitaSDK** built with softfp (`arm-vita-eabi`).
+- **MSYS2** with `make`, `cmake`, `bash`.
+- Vendored libraries in `lib/`:
+  - `vitaGL` (softfp)
   - `vitaShaRK`/`SceShaccCg`
   - `kubridge`
   - `FalsoJNI`
   - `so_util`
   - `fios`, `sha1`, `zlib`
-- Python 3 + Pillow para a arte neutra da LiveArea (opcional; os PNGs já estão
-  no repositório).
-- PowerShell no Windows para `tools/make_vpk.ps1`.
+- Python 3 + Pillow for LiveArea art (optional; the neutral PNGs are already in
+  the repository).
+- PowerShell on Windows for `tools/make_vpk.ps1`.
 
-## 2. Configurar e compilar
+## 2. Configure and build
 
 ```bash
 cd brucelee-vita
@@ -27,87 +27,103 @@ bash build.sh
 bash make.sh
 ```
 
-`build.sh` configura o CMake em `build/`; `make.sh` compila e gera
+`build.sh` configures CMake in `build/`; `make.sh` compiles and produces
 `build/eboot.bin`/SELF.
 
-### Caminho com espaços
+### Paths with spaces
 
-O macro `vita_create_vpk` do CMake pode quebrar com espaços no caminho. O
-projeto usa `tools/make_vpk.ps1` (PowerShell) para empacotar com quoting
-nativo.
+CMake's `vita_create_vpk` macro can break on paths containing spaces. This
+project uses `tools/make_vpk.ps1` (PowerShell) to pack with native Windows
+quoting.
 
-## 3. Arte da LiveArea
+## 3. LiveArea artwork
 
-O release usa **arte neutra**, sem assets do jogo:
+The public release uses **neutral artwork**, with no game assets:
 
 ```bash
 py -3 tools/make_neutral_livearea.py
 ```
 
-Gera:
+Generated files:
 
 ```
 extras/livearea/icon0.png    128x128
 extras/livearea/pic0.png     960x544
 extras/livearea/bg0.png      840x500
 extras/livearea/startup.png  280x158
+extras/loading.rgb565        960x544 RGB565
 ```
 
-Esses PNGs são originais (gradiente + texto) e podem ser commitados.
+These are original (gradient + text) and may be committed.
 
-O script `tools/make_livearea.py` é **pessoal**: ele usa o ícone do seu APK
-para gerar uma LiveArea com a arte do jogo. Não faça commit do
-`source_icon.jpg` nem da arte gerada por ele; o `.gitignore` já os exclui.
+### Optional personal LiveArea
 
-## 4. VPK e hash
+`tools/make_livearea.py` uses the icon from **your own APK** to generate a
+personal LiveArea. The output goes to `extras/livearea_personal/` and
+`extras/loading_personal.rgb565`, both git-ignored.
+
+The result is derived from copyrighted game art. Use it only on your own
+console; do **not** commit or distribute it.
+
+```powershell
+py -3 tools\make_livearea.py
+powershell -ExecutionPolicy Bypass -File tools\make_vpk.ps1 `
+  -ArtDir extras\livearea_personal `
+  -LoadingFile extras\loading_personal.rgb565 `
+  -OutFile build\brucelee-personal.vpk
+```
+
+The public repository and release intentionally remain neutral.
+
+## 4. VPK and hash
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\make_vpk.ps1
 ```
 
-Gera:
+Output:
 
 ```
 build/brucelee.vpk
 build/SHA256SUMS.txt
 ```
 
-O VPK contém `eboot.bin`, `sce_sys/` (LiveArea neutra, SFO) e
-`sce_sys/provenance.txt`. Ele **não** contém `.so`, `Core.pakh`,
-`Core.pakd000`, `data.zpak`, saves ou APK.
+The VPK contains `eboot.bin`, `sce_sys/` (neutral LiveArea and SFO),
+`sce_sys/provenance.txt` and `loading.rgb565`. It does **not** contain `.so`
+files, `Core.pakh`, `Core.pakd000`, `data.zpak`, saves or the APK.
 
-## 5. Dados locais para testar
+## 5. Local game data for testing
 
-Use sua cópia legal:
+Use your legal copy:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\prepare_data.ps1 `
-  -Apk "C:\caminho\jogo.apk" -Zpak "C:\caminho\data.zpak"
+  -Apk "C:\path\game.apk" -Zpak "C:\path\data.zpak"
 ```
 
-O resultado vai para `data/` (ignorado pelo git). Copie para
-`ux0:data/brucelee/` no Vita.
+The result goes to `data/` (git-ignored). Copy it to `ux0:data/brucelee/` on
+the Vita.
 
-## 6. Teste mínimo antes de release
+## 6. Minimum release test
 
-- [ ] Boot limpo, sem dados antigos.
-- [ ] Menus, opções, save/load.
-- [ ] Luta, pause, retomar.
-- [ ] D-pad + analógico + face buttons + touch.
-- [ ] Áudio (música/SFX), YES na tela de som.
-- [ ] 30+ min sem crash.
-- [ ] VPK sem dados do jogo (`unzip -l`).
-- [ ] `SHA256SUMS.txt` atualizado.
+- [ ] Clean boot without old data.
+- [ ] Menus, options, save/load.
+- [ ] Fight, pause, resume.
+- [ ] D-pad + analog + face buttons + touch.
+- [ ] Audio (music/SFX), YES on the sound prompt.
+- [ ] 30+ min without crashes.
+- [ ] VPK contains no game data (`unzip -l`).
+- [ ] `SHA256SUMS.txt` updated.
 
-## 7. Estrutura
+## 7. Layout
 
 ```
-source/          loader, shims JNI/input/áudio, EGL/I/O/pthread
-lib/             dependências vendorizadas
-tools/           prepare_data, make_neutral_livearea, make_vpk
-extras/livearea  arte neutra + template.xml
-docs/            documentação pública
+source/          loader, JNI/input/audio shims, EGL/I/O/pthread
+lib/             vendored dependencies
+tools/           prepare_data, make_livearea, make_neutral_livearea, make_vpk
+extras/livearea  neutral art + template.xml
+docs/            public documentation
 ```
 
-As notas internas de engenharia reversa (offsets, EULA, caso Bruce Lee) **não
-fazem parte do repositório público** e estão no `.gitignore`.
+Internal reverse-engineering notes (offsets, EULA, Bruce Lee case study) are
+**not part of the public repository** and are in `.gitignore`.

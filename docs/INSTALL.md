@@ -1,28 +1,27 @@
-# Instalação — Bruce Lee: Dragon Warrior (PS Vita)
+# Installation — Bruce Lee: Dragon Warrior (PS Vita)
 
-> Guia para **jogadores**. O VPK contém apenas o loader; os dados do jogo vêm
-> da sua cópia legal do APK Android. Veja `LEGAL.md`.
+> Player guide. The VPK contains only the loader; the game data comes from
+> your legally obtained Android APK. See `LEGAL.md`.
 
 ---
 
-## 1. O que você precisa
+## 1. What you need
 
-- PS Vita ou PSTV com CFW (HENkaku/Enso).
-- [kubridge](https://github.com/TheOfficialFloW/kubridge/releases) (plugin de
-  kernel).
-- [FdFix](https://github.com/TheOfficialFloW/FdFix/releases) (recomendado; não
-  use junto com rePatch).
-- `libshacccg.suprx` em `ur0:data/` (ShaRKBR33D ou
-  [guia de extração](https://samilops2.gitbook.io/vita-troubleshooting-guide/shader-compiler/extract-libshacccg.suprx)).
-- Cópia legal do APK de **Bruce Lee: Dragon Warrior 1.15.26** e do
-  `data.zpak` do jogo.
-- ~220 MB livres em `ux0:`.
-- VPK da aba **Releases**:
+- PS Vita or PSTV with CFW (HENkaku/Enso).
+- [kubridge](https://github.com/TheOfficialFloW/kubridge/releases) kernel
+  plugin.
+- [FdFix](https://github.com/TheOfficialFloW/FdFix/releases) (recommended; do
+  not use it together with rePatch).
+- `libshacccg.suprx` in `ur0:data/` (ShaRKBR33D or the
+  [extraction guide](https://samilops2.gitbook.io/vita-troubleshooting-guide/shader-compiler/extract-libshacccg.suprx)).
+- A legal copy of **Bruce Lee: Dragon Warrior 1.15.26** and its `data.zpak`.
+- ~220 MB free in `ux0:`.
+- The VPK from the repository's **Releases**:
   <https://github.com/lferrete/brucelee-vita/releases/latest>.
 
 ## 2. Plugins
 
-Copie `kubridge.skprx` e `fd_fix.skprx` para `ux0:tai/` e edite
+Copy `kubridge.skprx` and `fd_fix.skprx` to `ux0:tai/` and edit
 `ux0:tai/config.txt`:
 
 ```
@@ -31,11 +30,11 @@ ux0:tai/kubridge.skprx
 ux0:tai/fd_fix.skprx
 ```
 
-Reinicie o console. Instale o `libshacccg.suprx` em `ur0:data/`.
+Reboot the console. Install `libshacccg.suprx` in `ur0:data/`.
 
-## 3. Preparar os dados do jogo
+## 3. Prepare the game data
 
-### 3.1 Layout final
+### 3.1 Final layout
 
 ```
 ux0:data/brucelee/
@@ -53,52 +52,53 @@ ux0:data/brucelee/
   save/
 ```
 
-### 3.2 De onde vem cada arquivo
+### 3.2 Where each file comes from
 
-Do **APK** (é um ZIP; abra com 7-Zip/WinRAR ou renomeie para `.zip`):
+From the **APK** (a ZIP; open it with 7-Zip/WinRAR or rename it to `.zip`):
 
 - `lib/armeabi/libdefault.so`
 - `lib/armeabi/libzplatform.so`
 - `lib/armeabi/libjava-activity.so`
 - `assets/BruceLee.zpak`
 
-Do **`data.zpak`** (pacote de conteúdo do jogo):
+From the game's **`data.zpak`**:
 
 - `Core.pakh`
 - `Core.pakd000`
-- `metadata.xml` do container → `content/metadata.xml`
+- the container `metadata.xml` → `content/metadata.xml`
 
-O `metadata.xml` da **raiz** e o `game/metadata.xml` devem ser o **manifesto
-de aplicação** (com `<platforms><platform type="android">`), extraído de
+The root `metadata.xml` and `game/metadata.xml` must be the **application
+manifest** (with `<platforms><platform type="android">`) from
 `assets/BruceLee.zpak` (entry `metadata.xml`).
 
-Copie também o `data.zpak` original para `content/data.zpak` (o ZSystem pode
-abri-lo como ZIP).
+Also copy the original `data.zpak` to `content/data.zpak` (ZSystem may open it
+as a ZIP).
 
-### 3.3 Automático no Windows
+### 3.3 Windows helper
 
-Na raiz do projeto:
+From the project root:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\prepare_data.ps1
 ```
 
-O script procura o APK e o `data.zpak` na pasta pai; para caminhos explícitos:
+The script looks for the APK and `data.zpak` in the parent folder. For explicit
+paths:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\prepare_data.ps1 `
-  -Apk "C:\caminho\jogo.apk" `
-  -Zpak "C:\caminho\data.zpak"
+  -Apk "C:\path\game.apk" `
+  -Zpak "C:\path\data.zpak"
 ```
 
-Ele gera `data/` no projeto. Copie **o conteúdo** de `data/` para
+It writes `data/` in the project. Copy the **contents** of `data/` to
 `ux0:data/brucelee/`.
 
-> O script também extrai `res/drawable/icon.jpg` para uso pessoal na LiveArea.
-> Esse arquivo e a arte derivada dele **não** devem ser commitados; o release
-> usa arte neutra.
+> The script also extracts `res/drawable/icon.jpg` for optional personal
+> LiveArea art. That file and the generated art must **not** be committed; the
+> public release uses neutral art.
 
-### 3.4 Manual (Linux/macOS/outro PC)
+### 3.4 Manual (Linux/macOS/other)
 
 Use `unzip`:
 
@@ -112,54 +112,54 @@ cp ux0data/brucelee/metadata.xml ux0data/brucelee/game/metadata.xml
 cp data.zpak ux0data/brucelee/content/data.zpak
 ```
 
-(Ajuste os caminhos; o APK é um ZIP.)
+(Adjust paths; the APK is a ZIP.)
 
-## 4. Instalar o VPK
+## 4. Install the VPK
 
-1. Copie o VPK para o Vita (VitaShell/FTP).
-2. Instale pelo VitaShell.
-3. Confirme que `ux0:data/brucelee/` está no layout acima.
-4. Abra o jogo.
-5. Na tela “enable sound”, escolha **YES**.
+1. Copy the VPK to the Vita (VitaShell/FTP).
+2. Install it with VitaShell.
+3. Confirm `ux0:data/brucelee/` matches the layout above.
+4. Launch the game.
+5. On the "enable sound" screen, choose **YES**.
 
-O VPK não inclui os dados do jogo; se faltar algo, o loader mostra um diálogo
-ou grava o erro em `ux0:data/brucelee/logs/`.
+The VPK does not include game data. If something is missing, the loader shows a
+dialog or writes the error to `ux0:data/brucelee/logs/`.
 
-## 5. Controles
+## 5. Controls
 
-| Vita | Ação |
+| Vita | Action |
 |---|---|
-| D-pad / analógico esquerdo | mover |
-| Quadrado / Triângulo | soco |
-| Cross / Circle | chute |
-| Start | pausar |
-| Cross | confirmar / entrar |
-| Circle | voltar / fechar pause |
-| Tela touch | HUD e menus |
+| D-pad / left analog stick | move |
+| Square / Triangle | punch |
+| Cross / Circle | kick |
+| Start | pause |
+| Cross | confirm / enter |
+| Circle | back / close pause |
+| Touch screen | HUD and menus |
 
-No pause: Cross confirma; Circle fecha o pause; nos submenus, Circle volta.
-Select não é necessário.
+In the pause menu, Cross confirms and Circle closes it; in submenus, Circle
+goes back. Select is not required.
 
-## 6. Áudio
+## 6. Audio
 
-- Escolha **YES** em “enable sound”.
-- O jogo guarda `sound_volume`/`music_volume` no save.
-- O port não muda o volume do sistema; ajuste no Vita se necessário.
-- Se estiver mudo, veja `docs/TROUBLESHOOTING.md`.
+- Choose **YES** on "enable sound".
+- The game stores `sound_volume`/`music_volume` in its save.
+- The port does not change the system volume; adjust it on the Vita if needed.
+- If muted, see `docs/TROUBLESHOOTING.md`.
 
-## 7. Save
+## 7. Saves
 
-- Fica em `ux0:data/brucelee/save/`.
-- Faça backup antes de trocar de versão.
-- Não edite o save com o jogo aberto.
+- Located in `ux0:data/brucelee/save/`.
+- Back up before changing versions.
+- Do not edit the save while the game is running.
 
-## 8. Desinstalar
+## 8. Uninstall
 
-1. Apague o app pela LiveArea/VitaShell.
-2. Se quiser remover os dados/save, apague `ux0:data/brucelee/`.
+1. Delete the app from the LiveArea/VitaShell.
+2. To remove data/saves, delete `ux0:data/brucelee/`.
 
-## 9. Privacidade e legalidade
+## 9. Privacy and legal
 
-- O port não tem telemetria.
-- Não redistribua o APK, as `.so`, os pacotes, os saves ou a arte do jogo.
-- Você precisa de uma cópia legal. Veja `LEGAL.md`.
+- The port has no telemetry.
+- Do not redistribute the APK, `.so` files, packages, saves or game art.
+- You need a legal copy. See `LEGAL.md`.

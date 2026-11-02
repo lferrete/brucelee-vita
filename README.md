@@ -2,56 +2,56 @@
   <img src="extras/livearea/pic0.png" alt="Bruce Lee: Dragon Warrior — PS Vita port" width="640">
 </p>
 
-# Bruce Lee: Dragon Warrior — PS Vita (port não oficial)
+# Bruce Lee: Dragon Warrior — PS Vita (unofficial port)
 
-Port não oficial do jogo Android **Bruce Lee: Dragon Warrior** (Digital
-Legends / Sony Ericsson / Indiagames, v1.15.26, `armeabi`) para o **PS Vita**,
-usando [vitaGL](https://github.com/Rinnegatamante/vitagl) e o ecossistema
-`so_util`/FalsoJNI.
+Unofficial port of the Android game **Bruce Lee: Dragon Warrior** (Digital
+Legends / Sony Ericsson / Indiagames, v1.15.26, `armeabi`) to the **PS Vita**,
+using [vitaGL](https://github.com/Rinnegatamante/vitagl) and the
+`so_util`/FalsoJNI ecosystem.
 
-> **Aviso legal:** este é um projeto de fã, não oficial e não afiliado aos
-> detentores do jogo. O repositório e o VPK **não contêm** o APK, as `.so`, os
-> pacotes de conteúdo, as texturas, os sons ou os saves do jogo. Você precisa
-> de uma **cópia legal** do jogo Android. Leia [`LEGAL.md`](LEGAL.md) antes de
-> instalar ou redistribuir.
+> **Legal notice:** this is an unofficial fan project, not affiliated with or
+> endorsed by the rights holders. The repository and the released VPK **do not
+> contain** the APK, the game's `.so` libraries, content packages, textures,
+> sounds, or saves. You must provide a **legally obtained copy** of the Android
+> game. Read [`LEGAL.md`](LEGAL.md) before installing or redistributing.
 
-**Repositório:** <https://github.com/lferrete/brucelee-vita>  
+**Repository:** <https://github.com/lferrete/brucelee-vita>  
 **Release:** <https://github.com/lferrete/brucelee-vita/releases/latest>
 
 ---
 
 ## Status
 
-- Testado com a versão Android **1.15.26** (`armeabi`).
-- Renderização nativa **960×544** via vitaGL, ~60 FPS.
-- Áudio (música + efeitos) via `AudioTrack` → `sceAudioOut`, com resample FIR
-  44.1→48 kHz.
-- Controles físicos e touch:
-  - D-pad e analógico esquerdo movem o personagem.
-  - Quadrado/Triângulo soco; Cross/Circle chute.
-  - Start pausa.
-  - Cross confirma nos menus; Circle volta/fecha o pause.
-  - Tela touch do Vita funciona.
-- Save/config do jogo funcionam em `ux0:data/brucelee/save/`.
-- O VPK é **somente o loader**; os dados do jogo ficam fora dele.
+- Tested with the Android version **1.15.26** (`armeabi`).
+- Native **960×544** rendering via vitaGL, ~60 FPS.
+- Audio (music + SFX) through `AudioTrack` → `sceAudioOut`, with a 44.1→48 kHz
+  FIR resampler.
+- Physical and touch controls:
+  - D-pad and left analog stick move the character.
+  - Square/Triangle punch; Cross/Circle kick.
+  - Start pauses.
+  - Cross confirms in menus; Circle goes back/closes the pause menu.
+  - The Vita front touch screen works.
+- Save/config work in `ux0:data/brucelee/save/`.
+- The VPK is **loader-only**; the game data stays outside it.
 
-## Requisitos
+## Requirements
 
-1. PS Vita/PSTV com CFW (HENkaku/Enso).
-2. [kubridge](https://github.com/TheOfficialFloW/kubridge/releases) como plugin
-   de kernel.
-3. [FdFix](https://github.com/TheOfficialFloW/FdFix/releases) (recomendado).
-4. `libshacccg.suprx` em `ur0:data/` — instale via
-   [ShaRKBR33D](https://github.com/Rinnegatamante/ShaRKBR33D/releases) ou
-   siga o [guia de extração](https://samilops2.gitbook.io/vita-troubleshooting-guide/shader-compiler/extract-libshacccg.suprx).
-5. Uma **cópia legal** do APK Android e do `data.zpak` do jogo.
-6. Espaço livre em `ux0:` para os dados (~220 MB) e o VPK.
+1. PS Vita/PSTV with CFW (HENkaku/Enso).
+2. [kubridge](https://github.com/TheOfficialFloW/kubridge/releases) kernel
+   plugin.
+3. [FdFix](https://github.com/TheOfficialFloW/FdFix/releases) (recommended).
+4. `libshacccg.suprx` in `ur0:data/` — install via
+   [ShaRKBR33D](https://github.com/Rinnegatamante/ShaRKBR33D/releases) or the
+   [extraction guide](https://samilops2.gitbook.io/vita-troubleshooting-guide/shader-compiler/extract-libshacccg.suprx).
+5. A **legally obtained copy** of the Android APK and the game's `data.zpak`.
+6. Free space in `ux0:` for the data (~220 MB) and the VPK.
 
-## Instalação (jogador)
+## Installation (players)
 
-### 1. Instale os plugins
+### 1. Install the plugins
 
-Copie `kubridge.skprx` e `fd_fix.skprx` para `ux0:tai/` e adicione em
+Copy `kubridge.skprx` and `fd_fix.skprx` to `ux0:tai/` and add to
 `ux0:tai/config.txt`:
 
 ```
@@ -60,18 +60,18 @@ ux0:tai/kubridge.skprx
 ux0:tai/fd_fix.skprx
 ```
 
-> Se você usa `rePatch`, não instale o `fd_fix.skprx`.
+> If you use `rePatch`, do not install `fd_fix.skprx`.
 
-Reinicie o console. Instale também o `libshacccg.suprx` em `ur0:data/`.
+Reboot the console. Install `libshacccg.suprx` in `ur0:data/`.
 
-### 2. Baixe o VPK
+### 2. Download the VPK
 
-Pegue o VPK mais recente na aba **Releases** deste repositório. Ele contém
-apenas o loader e a arte neutra da LiveArea — **não** contém o jogo.
+Get the latest VPK from the repository's **Releases** tab. It contains only the
+loader and neutral LiveArea art — **not** the game.
 
-### 3. Prepare os dados do jogo
+### 3. Prepare the game data
 
-Extraia da sua cópia legal:
+Extract from your legal copy:
 
 ```
 ux0:data/brucelee/
@@ -88,66 +88,70 @@ ux0:data/brucelee/
   shader_cache/
 ```
 
-- Do APK: `lib/armeabi/libdefault.so`, `libzplatform.so`,
+- From the APK: `lib/armeabi/libdefault.so`, `libzplatform.so`,
   `libjava-activity.so`, `assets/BruceLee.zpak`.
-- Do `data.zpak`: `Core.pakh`, `Core.pakd000` e o `metadata.xml` do container.
-- O `metadata.xml` da raiz deve ser o **manifesto de aplicação** (com
-  `<platforms><platform type="android">`), extraído de
+- From `data.zpak`: `Core.pakh`, `Core.pakd000` and the container
+  `metadata.xml`.
+- The root `metadata.xml` and `game/metadata.xml` must be the **application
+  manifest** (with `<platforms><platform type="android">`), extracted from
   `assets/BruceLee.zpak`.
-- O `data.zpak` também deve ser copiado para `content/data.zpak`.
+- Also copy `data.zpak` to `content/data.zpak`.
 
-No Windows, o script `tools/prepare_data.ps1` faz essa extração:
+On Windows, `tools/prepare_data.ps1` automates the extraction:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\prepare_data.ps1
 ```
 
-Ele procura o APK e o `data.zpak` na pasta pai do projeto; também aceita
-`-Apk` e `-Zpak` explícitos. O resultado fica em `data/`; copie o conteúdo
-para `ux0:data/brucelee/`.
+It looks for the APK and `data.zpak` in the project's parent folder; you can
+also pass `-Apk` and `-Zpak` explicitly. The output is written to `data/`;
+copy its contents to `ux0:data/brucelee/`.
 
-> O repositório **não** inclui o APK, o `data.zpak`, as `.so`, os `.pakh/.pakd`
-> nem qualquer asset do jogo. Não peça/post/e link esses arquivos em issues.
+> The repository does **not** include the APK, `data.zpak`, `.so` files,
+> `.pakh/.pakd` packages, or any game asset. Do not ask for, post, or link
+> those files in issues.
 
-### 4. Instale e abra
+### 4. Install and launch
 
-Instale o VPK pelo VitaShell, abra o jogo e escolha **YES** na tela
-“enable sound”. Sem YES, o jogo fica mudo.
+Install the VPK with VitaShell, launch the game, and choose **YES** on the
+"enable sound" screen. Without YES, the game stays muted.
 
-## Controles
+## Controls
 
-| Vita | Ação |
+| Vita | Action |
 |---|---|
-| D-pad / analógico esquerdo | mover o personagem |
-| Quadrado / Triângulo | soco |
-| Cross / Circle | chute |
-| Start | pausar |
-| Cross | confirmar / entrar em opções |
-| Circle | voltar (menus) / fechar o pause |
-| Tela touch | HUD, menus e toque original do jogo |
+| D-pad / left analog stick | move the character |
+| Square / Triangle | punch |
+| Cross / Circle | kick |
+| Start | pause |
+| Cross | confirm / enter options |
+| Circle | back (menus) / close pause |
+| Touch screen | HUD, menus and the game's original touch input |
 
-No pause, o Cross confirma e o Circle fecha o menu; nos submenus, o Circle
-volta. O Select não é necessário para jogar.
+In the pause menu, Cross confirms and Circle closes the menu; in submenus,
+Circle goes back. Select is not required to play.
 
-## Áudio
+## Audio
 
-- Escolha **YES** em “enable sound”.
-- O volume do jogo fica no save/config (`sound_volume`, `music_volume`).
-- O port não altera o volume do sistema.
-- Se o áudio estiver mudo, confira o YES, o volume do Vita e o log
+- Choose **YES** on "enable sound".
+- The game's volume is stored in its save/config (`sound_volume`,
+  `music_volume`).
+- The port does not change the system volume.
+- If audio is muted, check the YES prompt, the Vita volume, and the log
   (`AudioTrack`, `[at]`).
 
-## Solução de problemas
+## Troubleshooting
 
-- **Tela preta / volta para a LiveArea:** confira kubridge/FdFix, o
-  `libshacccg.suprx` e se os dados estão exatamente no layout acima.
-- **“Missing shared object”:** falta uma `.so` em `ux0:data/brucelee/lib/armeabi/`.
-- **Não encontra pacote:** faltam `Core.pakh`/`Core.pakd000` ou
-  `content/data.zpak`.
-- **Sem áudio:** escolha YES; veja `ux0:data/brucelee/logs/`.
-- **LiveArea antiga em cache:** reinicie o console ou atualize a LiveArea.
-- **Controle estranho:** não use plugins de remapeamento que interceptem o
-  pad; o port já mapeia D-pad, analógico, face buttons e touch.
+- **Black screen / returns to LiveArea:** check kubridge/FdFix, the
+  `libshacccg.suprx` file, and that the data matches the layout above.
+- **"Missing shared object":** a `.so` is missing from
+  `ux0:data/brucelee/lib/armeabi/`.
+- **Package not found:** `Core.pakh`/`Core.pakd000` or `content/data.zpak` is
+  missing.
+- **No audio:** choose YES; check `ux0:data/brucelee/logs/`.
+- **Old LiveArea art cached:** reboot the console or refresh the LiveArea.
+- **Strange controls:** remove pad-remapping/overlay plugins; the port already
+  maps D-pad, analog, face buttons and touch.
 
 Logs:
 
@@ -155,65 +159,76 @@ Logs:
 ux0:data/brucelee/logs/brucelee_NNN.log
 ```
 
-Ao reportar um bug, envie o trecho relevante do log e a versão do jogo/console.
-**Nunca** anexe o APK, as `.so`, os pacotes ou saves.
+When reporting a bug, include the relevant log excerpt and your game/console
+versions. **Never** attach the APK, `.so` files, packages, or saves.
 
-Guia detalhado: [`docs/INSTALL.md`](docs/INSTALL.md) e
+Detailed guide: [`docs/INSTALL.md`](docs/INSTALL.md) and
 [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
-## Compilar
+## Building from source
 
-Pré-requisitos: VitaSDK com softfp, MSYS2 (make/cmake) e as dependências
-vendorizadas em `lib/` (vitaGL, vitaShaRK, kubridge, FalsoJNI, so_util, fios,
-sha1).
+Requirements: a softfp VitaSDK, MSYS2 (make/cmake), and the vendored libraries
+in `lib/` (vitaGL, vitaShaRK, kubridge, FalsoJNI, so_util, fios, sha1).
 
 ```bash
 cd brucelee-vita
-bash build.sh     # configura o CMake
-bash make.sh      # compila
+bash build.sh     # configure CMake
+bash make.sh      # build
 ```
 
-O VPK é gerado por:
+Build the VPK with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\make_vpk.ps1
 # build/brucelee.vpk + build/SHA256SUMS.txt
 ```
 
-A arte da LiveArea do release é gerada por
-`tools/make_neutral_livearea.py` (sem assets do jogo). O script
-`tools/make_livearea.py` é **pessoal** e usa o ícone do seu APK; não faça
-commit da arte gerada por ele.
+The public release uses neutral LiveArea art generated by
+`tools/make_neutral_livearea.py` (no game assets).
 
-Guia completo: [`docs/BUILDING.md`](docs/BUILDING.md).
+### Optional personal LiveArea
 
-## Dados e privacidade
+`tools/make_livearea.py` can generate a personal LiveArea from the icon in
+**your own legally obtained APK**. The output goes to
+`extras/livearea_personal/` (git-ignored) and is derived from copyrighted game
+art: use it only on your own console and **do not commit or distribute it**.
 
-- `data/`, `build/`, saves, logs e arte derivada do jogo estão no
-  `.gitignore`.
-- O VPK de release não contém dados do jogo.
-- O repositório não coleta dados; não há telemetria.
+```powershell
+py -3 tools\make_livearea.py
+powershell -ExecutionPolicy Bypass -File tools\make_vpk.ps1 `
+  -ArtDir extras\livearea_personal `
+  -LoadingFile extras\loading_personal.rgb565 `
+  -OutFile build\brucelee-personal.vpk
+```
 
-## Créditos
+The public repository/release intentionally stays neutral for legal safety.
 
-- **Port, loader, integração, input/áudio, documentação:** Leandro Ferrete.
-- **Jogo original:** Digital Legends / Sony Ericsson / Indiagames.
+## Data and privacy
+
+- `data/`, `build/`, saves, logs and game-derived art are in `.gitignore`.
+- The release VPK does not contain game data.
+- The port has no telemetry and collects no data.
+
+## Credits
+
+- **Port, loader, integration, input/audio, documentation:** Leandro Ferrete.
+- **Original game:** Digital Legends / Sony Ericsson / Indiagames.
 - **so_util:** TheFloW (Andy Nguyen), Rinnegatamante.
-- **FalsoJNI:** Volodymyr Atamanenko e contribuidores.
-- **vitaGL:** Rinnegatamante e contribuidores.
+- **FalsoJNI:** Volodymyr Atamanenko and contributors.
+- **vitaGL:** Rinnegatamante and contributors.
 - **kubridge:** TheFloW.
-- **vitaShaRK/SceShaccCg:** Rinnegatamante e contribuidores.
-- **VitaSDK, fios, sha1, zlib e newlib:** respectivos autores.
+- **vitaShaRK/SceShaccCg:** Rinnegatamante and contributors.
+- **VitaSDK, fios, sha1, zlib, newlib:** their respective authors.
 
-Detalhes em [`AUTHORS.md`](AUTHORS.md) e [`LICENSE`](LICENSE).
+See [`AUTHORS.md`](AUTHORS.md) and [`LICENSE`](LICENSE).
 
-## Documentação
+## Documentation
 
-- [`docs/INSTALL.md`](docs/INSTALL.md) — instalação passo a passo.
-- [`docs/BUILDING.md`](docs/BUILDING.md) — compilar e empacotar.
-- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — problemas comuns.
-- [`docs/AUTHORSHIP.md`](docs/AUTHORSHIP.md) — autoria e verificação.
-- [`docs/PUBLISHING.md`](docs/PUBLISHING.md) — como o repositório/release é
-  publicado e protegido.
-- [`LEGAL.md`](LEGAL.md) — aviso legal e takedown.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — regras para contribuições.
+- [`docs/INSTALL.md`](docs/INSTALL.md) — step-by-step installation.
+- [`docs/BUILDING.md`](docs/BUILDING.md) — build and package.
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — common problems.
+- [`docs/AUTHORSHIP.md`](docs/AUTHORSHIP.md) — authorship and verification.
+- [`docs/PUBLISHING.md`](docs/PUBLISHING.md) — publishing and repository
+  protection.
+- [`LEGAL.md`](LEGAL.md) — legal notice and takedown.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution rules.

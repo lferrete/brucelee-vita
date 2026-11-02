@@ -14,6 +14,7 @@ logs/
 # The personal LiveArea source icon is extracted from the user's APK.
 extras/livearea/source_icon.jpg
 extras/livearea_personal/
+extras/loading_personal.rgb565
 
 # Internal engineering notes: not part of the public release.
 docs/ANDROID_TO_VITA_PORTING.md
@@ -26,7 +27,6 @@ docs/VITAMCP_WORKFLOW.md
 PORTING_PLAN.md
 README VITAGL.md
 .opencode/
-tools/make_livearea.py
 tools/sync_port_skill.ps1
 tools/emu/
 extras/scripts/
