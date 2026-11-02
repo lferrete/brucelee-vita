@@ -15,8 +15,8 @@
   - `FalsoJNI`
   - `so_util`
   - `fios`, `sha1`, `zlib`
-- Python 3 + Pillow for LiveArea art (optional; the neutral PNGs are already in
-  the repository).
+- Python 3 + Pillow for LiveArea art (optional; the PNGs are already in the
+  repository).
 - PowerShell on Windows for `tools/make_vpk.ps1`.
 
 ## 2. Configure and build
@@ -38,13 +38,7 @@ quoting.
 
 ## 3. LiveArea artwork
 
-The public release uses **neutral artwork**, with no game assets:
-
-```bash
-py -3 tools/make_neutral_livearea.py
-```
-
-Generated files:
+The LiveArea art is tracked in the repository and used by default:
 
 ```
 extras/livearea/icon0.png    128x128
@@ -54,26 +48,28 @@ extras/livearea/startup.png  280x158
 extras/loading.rgb565        960x544 RGB565
 ```
 
-These are original (gradient + text) and may be committed.
+The art is derived from the original game and remains the property of its
+rights holders. The README uses a separate gameplay screenshot
+(`docs/fight-screenshot.png`); it is not part of the VPK.
 
-### Optional personal LiveArea
+### Regenerating the art
 
-`tools/make_livearea.py` uses the icon from **your own APK** to generate a
-personal LiveArea. The output goes to `extras/livearea_personal/` and
-`extras/loading_personal.rgb565`, both git-ignored.
-
-The result is derived from copyrighted game art. Use it only on your own
-console; do **not** commit or distribute it.
+`tools/make_livearea.py` uses the icon from **your own legally obtained APK**
+to regenerate the LiveArea. The script reads
+`extras/livearea/source_icon.jpg` and writes the tracked files above.
 
 ```powershell
 py -3 tools\make_livearea.py
-powershell -ExecutionPolicy Bypass -File tools\make_vpk.ps1 `
-  -ArtDir extras\livearea_personal `
-  -LoadingFile extras\loading_personal.rgb565 `
-  -OutFile build\brucelee-personal.vpk
 ```
 
-The public repository and release intentionally remain neutral.
+Review the image diff before committing. The VPK can also be packed with a
+custom art folder/loading screen:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\make_vpk.ps1 `
+  -ArtDir extras\livearea `
+  -LoadingFile extras\loading.rgb565
+```
 
 ## 4. VPK and hash
 
@@ -88,7 +84,7 @@ build/brucelee.vpk
 build/SHA256SUMS.txt
 ```
 
-The VPK contains `eboot.bin`, `sce_sys/` (neutral LiveArea and SFO),
+The VPK contains `eboot.bin`, `sce_sys/` (LiveArea art and SFO),
 `sce_sys/provenance.txt` and `loading.rgb565`. It does **not** contain `.so`
 files, `Core.pakh`, `Core.pakd000`, `data.zpak`, saves or the APK.
 
@@ -120,8 +116,8 @@ the Vita.
 ```
 source/          loader, JNI/input/audio shims, EGL/I/O/pthread
 lib/             vendored dependencies
-tools/           prepare_data, make_livearea, make_neutral_livearea, make_vpk
-extras/livearea  neutral art + template.xml
+tools/           prepare_data, make_livearea, make_vpk
+extras/livearea  LiveArea art + template.xml
 docs/            public documentation
 ```
 

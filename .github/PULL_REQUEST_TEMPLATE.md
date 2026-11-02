@@ -4,9 +4,9 @@
 
 ## Checklist
 
-- [ ] I did **not** include game files, APKs, `.so` libraries, `Core.pakh`,
-      `Core.pakd000`, `data.zpak`, assets, saves or piracy links.
-- [ ] The change is code/docs/build tooling or neutral artwork only.
+- [ ] I did **not** include game data files, APKs, `.so` libraries, `Core.pakh`,
+      `Core.pakd000`, `data.zpak`, saves or piracy links.
+- [ ] The change is code/docs/build tooling or artwork with clear rights.
 - [ ] I kept the original third-party copyright/license headers.
 - [ ] I built the project with VitaSDK softfp.
 - [ ] I tested on hardware (or clearly state that it is build-only).

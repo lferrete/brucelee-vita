@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# NEVER commit game data, saves, logs or derived game assets.
+# NEVER commit game data, saves or logs.
 # ---------------------------------------------------------------------------
 data/
 *.apk
@@ -11,8 +11,9 @@ tmp_save/
 logs/
 *.log
 
-# The personal LiveArea source icon is extracted from the user's APK.
+# The LiveArea source icon is extracted from the user's APK.
 extras/livearea/source_icon.jpg
+# Local personal artwork; the tracked LiveArea art lives in extras/livearea/.
 extras/livearea_personal/
 extras/loading_personal.rgb565
 

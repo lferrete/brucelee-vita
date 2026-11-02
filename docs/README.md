@@ -5,7 +5,7 @@ Documentation for players, developers and repository maintenance.
 | Document | Contents |
 |---|---|
 | [INSTALL.md](INSTALL.md) | Step-by-step installation, plugins, game data and controls. |
-| [BUILDING.md](BUILDING.md) | Build, generate the neutral LiveArea, VPK and hash. |
+| [BUILDING.md](BUILDING.md) | Build, LiveArea art, VPK and hash. |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Black screen, missing data, audio, input, saves and logs. |
 | [AUTHORSHIP.md](AUTHORSHIP.md) | Authorship, credits, verification and git/GPG. |
 | [PUBLISHING.md](PUBLISHING.md) | Safe publishing, `main` protection, releases and takedown. |

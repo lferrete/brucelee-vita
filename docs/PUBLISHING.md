@@ -21,28 +21,32 @@ Pattern observed in public Android → Vita ports:
 Conclusion: **port code + documentation + loader VPK** can be public; **game
 data cannot**. The README must state that users need a legal copy.
 
-This project goes further for safety:
+This project also:
 
-- The release LiveArea uses **neutral artwork** (text/gradient), with no
-  portrait, logo, icon or screenshots from the game.
-- The repository does not include internal reverse-engineering notes (EULA,
-  offsets, Bruce Lee case study); they are in `.gitignore`.
-- The release VPK contains `eboot.bin`, `sce_sys/` and `provenance.txt`, but
-  **no** `.so`, `Core.pakh`, `Core.pakd000`, `data.zpak` or saves.
-- The personal LiveArea generator is published, but the copyrighted generated
-  art is git-ignored and must not be distributed.
+- Uses LiveArea artwork derived from the original game (icon, portrait and
+  logo). It is included only to identify the unofficial port; all rights remain
+  with the original owners.
+- Keeps the README gameplay screenshot (`docs/fight-screenshot.png`) in the
+  repository; it is not part of the VPK.
+- Does not include internal reverse-engineering notes (EULA, offsets, Bruce Lee
+  case study); they are in `.gitignore`.
+- Ships a VPK with `eboot.bin`, `sce_sys/` and `provenance.txt`, but **no**
+  `.so`, `Core.pakh`, `Core.pakd000`, `data.zpak` or saves.
 
 ---
 
 ## 2. Legal checklist before publishing
 
 - [ ] `git ls-files` contains no `.so`, `.apk`, `.obb`, `.pakh`, `.pakd*`,
-      `.zpak`, save, log or game-derived art.
+      `.zpak`, save, log or game data.
+- [ ] The only game-derived files are the LiveArea art under `extras/livearea/`,
+      `extras/loading.rgb565` and the README screenshot
+      `docs/fight-screenshot.png`; they are documented in `LEGAL.md`.
 - [ ] `extras/livearea/source_icon.jpg` is ignored.
 - [ ] `extras/livearea_personal/` and `extras/loading_personal.rgb565` are
       ignored.
 - [ ] `build/` and `data/` are ignored.
-- [ ] The release VPK was generated with `tools/make_neutral_livearea.py`.
+- [ ] The release VPK uses the tracked LiveArea art (`extras/livearea/`).
 - [ ] `unzip -l build/brucelee.vpk` shows no game data.
 - [ ] `README.md`/`LEGAL.md` state that users need a legal copy.
 - [ ] `AUTHORS.md` keeps original and third-party credits.
@@ -146,8 +150,8 @@ with the checklist in §4.
 
 ## 6. Release
 
-1. Generate neutral artwork:
-   `py -3 tools/make_neutral_livearea.py`
+1. Review the tracked LiveArea art in `extras/livearea/` and the README
+   screenshot (`docs/fight-screenshot.png`).
 2. Build and package:
    `bash make.sh` and `powershell -File tools/make_vpk.ps1`.
 3. Verify the VPK:
@@ -166,8 +170,8 @@ with the checklist in §4.
    - credits;
    - SHA-256 hash;
    - "game data not included; use your own legal copy".
-7. Do not attach game screenshots or data. The neutral LiveArea art is already
-   inside the VPK.
+7. Do not attach game data. The LiveArea art and README screenshot are already
+   in the repository/VPK.
 
 ---
 
@@ -176,7 +180,7 @@ with the checklist in §4.
 If a rights holder complains:
 
 1. Do not argue; remove/restrict the contested material as soon as possible.
-2. If it is an asset/artwork, replace it with neutral art.
+2. If it is an asset/artwork, remove or replace the contested material.
 3. If it is the port itself, archive the repository/release and notify.
 4. Record the decision in the issue/commit.
 
@@ -199,6 +203,9 @@ The public channel is the repository's **Issues** tab (see `LEGAL.md`).
   `docs/VITAMCP_WORKFLOW.md`;
 - `.opencode/`, `tools/sync_port_skill.ps1`.
 
-Those files remain on your machine for development but are not published. If
-you ever want to publish technical notes, sanitize EULA/offsets and secrets
+`extras/livearea/*.png` and `extras/loading.rgb565` are tracked by design: they
+are the LiveArea art used by the VPK.
+
+The files above remain on your machine for development but are not published.
+If you ever want to publish technical notes, sanitize EULA/offsets and secrets
 first.

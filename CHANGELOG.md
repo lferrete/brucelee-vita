@@ -10,7 +10,7 @@
   - Square/Triangle punch; Cross/Circle kick.
   - Start pauses; Cross confirms; Circle goes back/closes the pause menu.
 - Save/config in `ux0:data/brucelee/save/`.
-- Neutral LiveArea artwork (no game assets).
+- LiveArea artwork based on the original game.
 - Loader-only VPK; game data must be provided by the user.
 - Documentation for installation, building, troubleshooting, authorship and
   publishing.

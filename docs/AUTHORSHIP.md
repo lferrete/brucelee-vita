@@ -11,8 +11,8 @@
 You can claim **the original port code**: loader, Android/ZSystem integration,
 input/audio shims, tools, build scripts and documentation. You **cannot** claim
 the game, its `.so` libraries, assets, saves or third-party libraries. The
-public LiveArea remains free of visual credits by choice; attribution lives in
-the code, logs and metadata.
+LiveArea remains free of visual credits by choice; attribution lives in the
+code, logs and metadata.
 
 The correct notice is:
 
@@ -31,9 +31,8 @@ Third-party libraries retain their own copyrights (see AUTHORS.md/LICENSE).
 
 - Headers in `source/port_author.h`, `source/main.c`, `source/loader.c`,
   `source/loader.h`, `source/java_shim.c`, `source/java_shim.h`.
-- `CMakeLists.txt`, `make.sh`, `build.sh`, `tools/make_vpk.ps1`,
-  `tools/make_neutral_livearea.py` and `tools/make_livearea.py` carry the port
-  copyright notice.
+- `CMakeLists.txt`, `make.sh`, `build.sh`, `tools/make_vpk.ps1` and
+  `tools/make_livearea.py` carry the port copyright notice.
 - `AUTHORS.md` separates port, original game and third parties.
 - `LICENSE` adds the port copyright line to the original authors.
 - `README.md` has an "Authorship" section.
@@ -50,8 +49,8 @@ Third-party libraries retain their own copyrights (see AUTHORS.md/LICENSE).
 
   Present in `ux0:data/brucelee/logs/brucelee_NNN.log`.
 
-- LiveArea: **no visual credit** by choice (the public art is neutral and does
-  not use game assets).
+- LiveArea: **no visual credit** by choice (the art is derived from the
+  original game).
 
 - SFO (`sce_sys/param.sfo`):
   - `TITLE` = game name;
@@ -159,7 +158,8 @@ a reasonable proof that the build came from you.
 ## 5. What not to do
 
 - Do not put your copyright on the game, its `.so` libraries, assets or saves.
-- Do not redistribute the APK, `.so` files, packages or original artwork.
+- Do not redistribute the APK, `.so` files, game packages, saves or additional
+  original assets.
 - Do not remove so_util/FalsoJNI/vitaGL/kubridge credits.
 - Do not change the MIT license of derived files to a more restrictive one;
   add your copyright line and keep the original notices.

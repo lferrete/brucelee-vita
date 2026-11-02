@@ -94,9 +94,9 @@ powershell -ExecutionPolicy Bypass -File tools\prepare_data.ps1 `
 It writes `data/` in the project. Copy the **contents** of `data/` to
 `ux0:data/brucelee/`.
 
-> The script also extracts `res/drawable/icon.jpg` for optional personal
-> LiveArea art. That file and the generated art must **not** be committed; the
-> public release uses neutral art.
+> The script also extracts `res/drawable/icon.jpg`, used by
+> `tools/make_livearea.py` to regenerate the LiveArea art. The source icon stays
+> git-ignored; the generated PNGs are part of the repository.
 
 ### 3.4 Manual (Linux/macOS/other)
 

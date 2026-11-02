@@ -11,7 +11,7 @@ accepted only through pull requests after review.
 2. **No piracy.** Do not link to APK/game-data downloads or request them in
    issues/PRs.
 3. **Code and docs only.** Contributions must be original code, documentation,
-   build scripts or neutral artwork created by you, compatible with the MIT
+   build scripts or artwork you have the rights to, compatible with the MIT
    license used by this port.
 4. **Keep third-party credits.** Do not remove copyright/license headers from
    so_util, FalsoJNI, vitaGL, kubridge, vitaShaRK or other dependencies.
@@ -24,7 +24,8 @@ accepted only through pull requests after review.
 
 - Fork the repository and open a PR against `main`.
 - The owner reviews and merges; non-owners cannot push to `main`.
-- PRs that include game files or copyrighted assets are closed immediately.
+- PRs that include the APK, game data, saves or unauthorized copyrighted files
+  are closed immediately.
 - By submitting code/docs, you agree to license your contribution under the
   repository's MIT license (see `LICENSE`).
 

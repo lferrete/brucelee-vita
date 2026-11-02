@@ -7,15 +7,17 @@
 kHz FIR), hardware diagnostics, documentation and testing.
 
 Copyright (C) 2026 Leandro Ferrete. The original port code is distributed under
-the MIT license (see `LICENSE`). The public LiveArea artwork is neutral; the
-port attribution lives in the source, log banner and VPK metadata.
+the MIT license (see `LICENSE`). The LiveArea artwork is derived from the
+original game and remains the property of its rights holders; the port
+attribution lives in the source, log banner and VPK metadata.
 
 ## Original game
 
 **Bruce Lee: Dragon Warrior** © Digital Legends / Sony Ericsson / Indiagames.
 All rights reserved. This project does **not** redistribute the APK, `.so`
-libraries, content packages, textures, sounds or save files. Users must provide
-a legally obtained copy.
+libraries, content packages, game data or save files. The LiveArea artwork is
+derived from the original game; users must provide a legally obtained copy to
+play.
 
 ## Third-party components
 
@@ -39,6 +41,6 @@ a legally obtained copy.
 - Source: headers in `source/port_author.h`, `source/main.c`,
   `source/loader.c`, `source/java_shim.c`, `CMakeLists.txt`, `make.sh`,
   `build.sh` and the tools.
-- The public LiveArea has no author watermark by choice.
+- The LiveArea has no author watermark by choice.
 
 See `docs/AUTHORSHIP.md` for the verification procedure and git/GPG guidance.

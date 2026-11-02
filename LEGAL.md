@@ -11,15 +11,17 @@ Entertainment, or any of their affiliates.
 code and other assets are the property of their respective owners. All rights
 reserved.
 
-## No game files in this repository or release VPK
+## What this repository and release VPK contain
 
-This repository and the released VPK contain **only the port code and neutral
-metadata/artwork created for this project**. They do **not** contain:
+This repository and the released VPK contain the **port code, metadata and
+LiveArea artwork derived from the original game**. The artwork remains the
+property of its rights holders and is included only to identify the unofficial
+port. They do **not** contain:
 
 - the original APK;
 - the game's `.so` libraries;
 - `Core.pakh`, `Core.pakd000`, `data.zpak` or any game package;
-- textures, sounds, fonts, videos, saves or other game assets.
+- the game's runtime textures, sounds, fonts, videos, saves or other data.
 
 The VPK is a loader: it expects the user to provide the game data under
 `ux0:data/brucelee/` from a **legally obtained copy** of the Android game.
