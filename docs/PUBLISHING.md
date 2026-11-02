@@ -87,8 +87,11 @@ Configuração de branch protection/ruleset para `main`:
 - [x] Require linear history.
 - [x] Do not allow force pushes.
 - [x] Do not allow deletions.
-- [x] Restrict who can push to matching branches: **somente o owner**
-      (`lferrete`).
+- [x] **Sem colaboradores** — em repositório pessoal, só o owner pode fazer
+      push por padrão. O GitHub não permite “restrict users” em repo pessoal;
+      a proteção contra terceiros é: nenhum collaborator + PR obrigatório com
+      aprovação. Se um dia adicionar um collaborator, ele só entra via PR
+      aprovado por você.
 - [x] Allow the owner/admin to bypass (para você não ficar trancado fora).
       Se quiser exigir PR até de você, desligue o bypass — mas aí você precisa
       de outro revisor para aprovar.

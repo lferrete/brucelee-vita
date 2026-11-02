@@ -67,11 +67,6 @@ $protection = @{
         required_approving_review_count = 1
         require_last_push_approval      = $true
     }
-    restrictions                    = @{
-        users = @($Owner)
-        teams = @()
-        apps  = @()
-    }
     required_conversation_resolution = $true
     required_linear_history          = $true
     allow_force_pushes               = $false
@@ -81,7 +76,8 @@ $protection = @{
     allow_fork_syncing               = $false
 }
 Invoke-GitHub -Method PUT -Uri "$api/branches/$Branch/protection" -Body $protection | Out-Null
-Write-Host "  PR required, 1 approval, linear history, no force/deletion, push restricted to $Owner"
+Write-Host "  PR required, 1 approval, linear history, no force/deletion"
+Write-Host "  (personal repo: only the owner can push; do not add collaborators)"
 
 Write-Host "== Actions permissions =="
 try {

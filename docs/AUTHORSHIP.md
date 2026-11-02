@@ -111,19 +111,31 @@ por si só. Combine com assinatura (GPG) e histórico git.
 
 ---
 
-## 4. Recomendação de versionamento e assinatura
+## 4. Versionamento e assinatura
 
-O projeto não é um repositório git no momento. Para criar uma trilha de
-autoria:
+O repositório oficial é:
+
+```
+https://github.com/lferrete/brucelee-vita
+```
+
+A branch `main` é protegida: o owner mantém o bypass de administrador; qualquer
+outro colaborador (se um dia houver) só entra via pull request aprovado. O
+commit inicial e a tag usam o e-mail noreply do GitHub para não expor o e-mail
+de trabalho:
 
 ```bash
-cd brucelee-vita
-git init
 git config user.name "Leandro Ferrete"
-git config user.email "SEU-EMAIL"
-git add .
+git config user.email "147426055+lferrete@users.noreply.github.com"
 git commit -m "Bruce Lee: Dragon Warrior - PS Vita port by Leandro Ferrete"
 git tag -a v1.0 -m "Port by Leandro Ferrete"
+```
+
+Para contribuir sem permissão de push:
+
+```bash
+git clone https://github.com/lferrete/brucelee-vita.git
+# fork no GitHub, branch, commit, pull request
 ```
 
 Opcional (recomendado para release):
