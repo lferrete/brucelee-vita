@@ -67,6 +67,10 @@ $protection = @{
         required_approving_review_count = 1
         require_last_push_approval      = $true
     }
+    # Personal repositories cannot use user/team restrictions.  The field must
+    # be present as null; "only the owner can push" is enforced by having no
+    # collaborators.  If collaborators are added later, they still need a PR.
+    restrictions                    = $null
     required_conversation_resolution = $true
     required_linear_history          = $true
     allow_force_pushes               = $false
